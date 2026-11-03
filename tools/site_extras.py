@@ -65,12 +65,12 @@ rep('''</div>
 dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabpanel" aria-labelledby="tab-builder" hidden>
     <div class="la-card" id="builder-form">
       <h2>Build a chart</h2>
-      <p>Pick what to show and how to break it down. The year, day and type filters at the top apply here too. Charts you add appear here and at the bottom of the Regiment tab, saved in this browser. Use Copy link to share one.</p>
+      <p>Pick what to show and how to break it down, then narrow it with the period and filters below. Charts you add appear here and at the bottom of the Regiment tab, saved in this browser. Use Copy link to share one.</p>
       <div class="bd-form">
         <label for="bd-measure">Show
           <select id="bd-measure">
             <option value="avg">Average attendance</option>
-            <option value="total">Total attendance</option>
+            <option value="event">Attendance at each event</option>
             <option value="held">Events and drills held</option>
             <option value="people">Different people</option>
           </select>
@@ -112,6 +112,7 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
           <input id="bd-title" placeholder="Optional">
         </label>
       </div>
+      <div class="bd-filters-slot"><span class="bd-slot-label">Period and filters</span></div>
       <p class="bd-preview-desc"></p>
       <div class="la-legend bd-preview-legend"></div>
       <div class="la-chart" data-draw="bd-preview"></div>

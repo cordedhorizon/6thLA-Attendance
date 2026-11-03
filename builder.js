@@ -8,7 +8,7 @@
 
   const MEASURES = {
     avg: 'Average attendance',
-    total: 'Total attendance',
+    event: 'Attendance at each event',
     held: 'Events and drills held',
     people: 'Different people',
   };
@@ -74,10 +74,11 @@
     form.title.value = cfg.title || '';
     syncForm();
   }
-  function syncForm() {
-    const perPost = form.x.value === 'post';
-    for (const o of form.measure.options) o.disabled = perPost && o.value !== 'total';
-    if (perPost) form.measure.value = 'total';
+  // Attendance at each event only makes sense one event at a time, so it and 'Each event or drill' go together.
+  function syncForm(changed) {
+    if (changed === 'measure' && form.measure.value === 'event') form.x.value = 'post';
+    if (form.x.value === 'post') form.measure.value = 'event';
+    else if (form.measure.value === 'event') form.measure.value = 'avg';
     for (const o of form.split.options) o.disabled = o.value !== 'none' && o.value === form.x.value;
     if (form.split.value === form.x.value) form.split.value = 'none';
   }
@@ -129,7 +130,7 @@
       c.n += 1; c.posts.add(r.post); c.names.add(r.name);
     }
     const value = (c) => {
-      if (cfg.measure === 'total') return c.n;
+      if (cfg.measure === 'event') return c.n;
       if (cfg.measure === 'held') return c.posts.size;
       if (cfg.measure === 'people') return c.names.size;
       const denom = cfg.split === 'company' ? xPosts.get(c.x).size : c.posts.size;
@@ -178,6 +179,7 @@
       unit: '',
       decimals: cfg.measure === 'avg',
       stack: cfg.type === 'stacked',
+      totalLabel: { avg: 'Average attendance', event: 'Attendance', held: 'Events and drills held', people: 'Total' }[cfg.measure],
     };
     if (cfg.x === 'post') {
       const info = postInfo;
@@ -219,7 +221,8 @@
     drawCustom(el, cfg, 240);
   });
 
-  let mine = load(STORE_MINE, []);
+  const upgrade = (cfg) => (cfg.measure === 'total' ? { ...cfg, measure: cfg.x === 'post' ? 'event' : 'avg' } : cfg);
+  let mine = load(STORE_MINE, []).map(upgrade);
   const persist = () => save(STORE_MINE, mine);
   const linkFor = (cfg) => {
     const { id, ...c } = cfg;
@@ -289,7 +292,7 @@
     });
   }
   for (const k of Object.keys(form)) {
-    form[k].addEventListener(k === 'person' || k === 'title' ? 'input' : 'change', () => { syncForm(); dash.draw('bd-preview'); });
+    form[k].addEventListener(k === 'person' || k === 'title' ? 'input' : 'change', () => { syncForm(k); dash.draw('bd-preview'); });
   }
 
   // Company and person choices come from the data.
@@ -370,12 +373,24 @@
     el.textContent = text + (p.day === 'all' ? '' : ', ' + p.day + 's only');
   });
 
+  // On the Build a chart tab, the period and filters sit inside the builder so it's clear they shape the chart.
+  const filters = document.querySelector('.la-filters');
+  const filtersHome = filters?.parentElement;
+  const slot = document.querySelector('.bd-filters-slot');
+  function placeFilters(name) {
+    if (!filters || !slot) return;
+    if (name === 'builder') { if (filters.parentElement !== slot) slot.append(filters); }
+    else if (filters.parentElement !== filtersHome) filtersHome.append(filters);
+  }
+  const pageShowTab = window.showTab;
+  window.showTab = function (name, link) { pageShowTab(name, link); placeFilters(name); };
+
   // A shared link opens the builder with that chart loaded.
   function openShared() {
     const m = location.hash.match(/^#chart=(.+)$/);
     if (!m) return;
     try {
-      writeForm(JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1]))))));
+      writeForm(upgrade(JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(m[1])))))));
       showTab('builder', false);
     } catch { /* bad link: ignore */ }
   }
@@ -392,5 +407,6 @@
     applyHidden();
     buildChooser();
     openShared();
+    placeFilters(document.getElementById('builder')?.hidden === false ? 'builder' : '');
   });
 })();

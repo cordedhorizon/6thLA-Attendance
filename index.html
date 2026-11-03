@@ -191,8 +191,8 @@
         <div class="la-chart la-short" data-draw="held" data-source="monthly"></div>
       </div>
       <div class="la-card" id="mix">
-        <h2>Total attendance by company, by month</h2>
-        <p>Everyone marked present that month, stacked by the company they were listed under.</p>
+        <h2>Average attendance by company, by month</h2>
+        <p>A typical event or drill that month, split by the company each person was listed under. The full bar is the average attendance.</p>
         <div class="la-chart la-short" data-draw="mix" data-source="company_monthly"></div>
         <div class="la-legend" data-draw="mix-legend" data-source="company_monthly"></div>
       </div>
@@ -206,12 +206,11 @@
   <section id="companies" class="la-page" role="tabpanel" aria-labelledby="tab-companies" hidden>
     <div class="la-card" id="company-table">
       <h2>Companies</h2>
-      <p>Total attendance counts every time one of a company's men was marked present. Share is that company's part of all attendance. Company comes from where each name was listed, so a recruit counts under Recruits until he is listed under a company.</p>
+      <p>Average attendance is how many of a company's men are at a typical event or drill. Share is that company's part of the regiment's attendance. Company comes from where each name was listed, so a recruit counts under Recruits until he is listed under a company.</p>
       <div class="la-tablebox">
         <table class="la-table" data-source="companies" data-row-key="kind,day,year,company">
           <thead><tr>
             <th data-field="company">Company</th>
-            <th class="la-n" data-field="turnout">Total attendance</th>
             <th class="la-n" data-field="avg">Average attendance</th>
             <th class="la-n" data-field="share">Share</th>
             <th class="la-n" data-field="people">Different people</th>
@@ -308,12 +307,12 @@
   <section id="builder" class="la-page" role="tabpanel" aria-labelledby="tab-builder" hidden>
     <div class="la-card" id="builder-form">
       <h2>Build a chart</h2>
-      <p>Pick what to show and how to break it down. The year, day and type filters at the top apply here too. Charts you add appear here and at the bottom of the Regiment tab, saved in this browser. Use Copy link to share one.</p>
+      <p>Pick what to show and how to break it down, then narrow it with the period and filters below. Charts you add appear here and at the bottom of the Regiment tab, saved in this browser. Use Copy link to share one.</p>
       <div class="bd-form">
         <label for="bd-measure">Show
           <select id="bd-measure">
             <option value="avg">Average attendance</option>
-            <option value="total">Total attendance</option>
+            <option value="event">Attendance at each event</option>
             <option value="held">Events and drills held</option>
             <option value="people">Different people</option>
           </select>
@@ -355,6 +354,7 @@
           <input id="bd-title" placeholder="Optional">
         </label>
       </div>
+      <div class="bd-filters-slot"><span class="bd-slot-label">Period and filters</span></div>
       <p class="bd-preview-desc"></p>
       <div class="la-legend bd-preview-legend"></div>
       <div class="la-chart" data-draw="bd-preview"></div>
@@ -638,11 +638,13 @@ function xLabels(months, x, svg, H, step) {
   let lastX = -Infinity;
   months.forEach((m, i) => {
     const isJan = m.endsWith('-01');
-    if (!(i === 0 || isJan || (step && i % step === 0))) return;
-    const label = months.length > 14 ? (isJan || i === 0 ? m.slice(0, 4) : null) : monthName(monthParse(m)).slice(0, 3);
+    const short = months.length <= 14;
+    if (!(short || i === 0 || isJan || (step && i % step === 0))) return;
+    const label = !short ? (isJan || i === 0 ? m.slice(0, 4) : null)
+      : isJan || i === 0 ? d3.utcFormat('%b %Y')(monthParse(m)) : d3.utcFormat('%b')(monthParse(m));
     if (!label) return;
     const px = x(m);
-    if (px - lastX < 40) return;
+    if (px - lastX < label.length * 7 + 8) return;
     lastX = px;
     svg.append('text').attr('x', px).attr('y', H - 4).text(label);
   });
@@ -824,7 +826,7 @@ function barChart(el, allMonths, series, o = {}) {
       const scale = el.clientWidth / W;
       hl.attr('x', x(m) - x.step() * 0.1).attr('width', x.step()).attr('visibility', 'visible');
       const lines = series.filter((s) => s.values.get(m)).map((s) => ({ color: series.length > 1 ? s.color : null, text: `${s.name}: ${(o.valueFmt ?? fmt)(s.values.get(m))}${o.unit ?? ''}` }));
-      if (o.stack && series.length > 1) lines.push({ text: `Total: ${fmt(total(m))}` });
+      if (o.stack && series.length > 1) lines.push({ text: `${o.totalLabel ?? 'Total'}: ${(o.valueFmt ?? fmt)(Math.round(total(m) * 10) / 10)}` });
       if (o.extra) lines.push(...o.extra(m));
       tip((x(m) + x.bandwidth() / 2) * scale, y(o.stack ? total(m) : d3.max(series, (s) => s.values.get(m) ?? 0)) * scale, o.tipTitle ? o.tipTitle(m) : monthName(monthParse(m)), lines.length ? lines : [{ text: 'None' }]);
     })
@@ -1013,8 +1015,8 @@ dash.draw('mix', (el) => {
   const r = rows('company_monthly').filter((x) => x.kind === P().kind && onDay(x) && inYear(x.month));
   const months = monthRange(r);
   if (!months.length) return;
-  const series = companiesIn(r).map((c) => ({ name: c, color: companyColor(c), values: new Map(r.filter((x) => x.company === c).map((x) => [x.month, x.turnout])) }));
-  barChart(el, months, series, { height: 180, stack: true });
+  const series = companiesIn(r).map((c) => ({ name: c, color: companyColor(c), values: new Map(r.filter((x) => x.company === c).map((x) => [x.month, x.avg])) }));
+  barChart(el, months, series, { height: 180, stack: true, decimals: true, valueFmt: one, totalLabel: 'Average attendance' });
 });
 
 dash.draw('mix-legend', (el) => {
@@ -1045,7 +1047,7 @@ dash.draw('company-rows', (tb) => {
   for (const x of r.filter((x) => x.kind === p.kind && x.year === p.year && x.day === p.day).sort((a, b) => companyRank(a.company) - companyRank(b.company))) {
     const tr = document.createElement('tr');
     tr.dataset.key = [x.kind, x.day, x.year, x.company].map(enc).join(',');
-    cell(tr, x.company); cell(tr, fmt(x.turnout), 1); cell(tr, one(x.avg), 1); cell(tr, pct(x.share), 1); cell(tr, fmt(x.people), 1);
+    cell(tr, x.company); cell(tr, one(x.avg), 1); cell(tr, pct(x.share), 1); cell(tr, fmt(x.people), 1);
     tb.append(tr);
   }
 });

@@ -18,6 +18,25 @@ rep('''      <button id="tab-checks" role="tab" data-tab="checks" aria-selected=
 ''', '''      <button id="tab-checks" role="tab" data-tab="checks" aria-selected="false">Name checks</button>
       <button id="tab-builder" role="tab" data-tab="builder" aria-selected="false">Build a chart</button>
 ''')
+rep('''      <select id="year" data-draw="year" data-source="summary" aria-label="Year"></select>
+''', '''      <select id="period" aria-label="Period">
+        <option value="all">All time</option>
+        <option value="7d">Past week</option>
+        <option value="1m">Past month</option>
+        <option value="3m">Past 3 months</option>
+        <option value="6m">Past 6 months</option>
+        <option value="1y">Past year</option>
+        <option value="ytd">This year so far</option>
+        <optgroup label="Calendar year" id="period-years"></optgroup>
+        <option value="custom">Pick dates…</option>
+      </select>
+      <span class="bd-dates" hidden>
+        <input type="date" id="from" aria-label="From date">
+        <span>to</span>
+        <input type="date" id="to" aria-label="To date">
+      </span>
+      <select id="year" data-draw="year" data-source="summary" aria-label="Year" hidden></select>
+''')
 rep('''    <div class="la-filters">
 ''', '''    <div class="la-filters">
       <details class="bd-choose">

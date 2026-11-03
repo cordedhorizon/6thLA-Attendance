@@ -11,7 +11,28 @@
   let started = false;
   let queued = false;
 
+  // The site's period picker sets from/to; every chart and calculation then sees only that stretch of attendance.
+  let rangeKey = '';
+  function checkRange() {
+    const key = (params.from || '') + '|' + (params.to || '');
+    if (key !== rangeKey) { rangeKey = key; for (const k of Object.keys(calcCache)) delete calcCache[k]; }
+  }
+
   function data(id) {
+    checkRange();
+    if (id === 'attendance' && (params.from || params.to) && loaded[id]?.status === 'ok') {
+      if (!calcCache[id]) {
+        const f = params.from || '0000', t = params.to || '9999';
+        if (!loaded[id].firstEver) {
+          loaded[id].firstEver = new Map();
+          for (const r of loaded[id].data) { const d = loaded[id].firstEver.get(r.name); if (!d || r.date < d) loaded[id].firstEver.set(r.name, r.date); }
+        }
+        const first = loaded[id].firstEver;
+        // Carry each person's first-ever date so first-timers are counted against all history, not just this period.
+        calcCache[id] = { status: 'ok', data: loaded[id].data.filter((r) => r.date >= f && r.date <= t).map((r) => ({ ...r, first_ever: first.get(r.name) })) };
+      }
+      return calcCache[id];
+    }
     if (calcs[id]) {
       if (calcCache[id]) return calcCache[id];
       const ins = calcs[id].inputs.map(data);

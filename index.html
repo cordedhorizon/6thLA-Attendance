@@ -54,6 +54,9 @@
   .la-gridline { stroke: var(--cds-chart-grid); stroke-width: 1; }
   .la-axis { stroke: var(--cds-chart-axis); stroke-width: 1; }
   .la-rule { stroke: var(--cds-chart-reference); stroke-width: 1; }
+  .la-zoomsel { fill: var(--color-fg); fill-opacity: .08; stroke: var(--color-fg-muted); stroke-width: 1; stroke-dasharray: 3 2; pointer-events: none; }
+  .la-zoomreset { position: absolute; top: 0; right: 0; z-index: 3; font: inherit; font-size: var(--cds-font-size-caption); padding: 2px var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); cursor: pointer; }
+  .la-zoomhint { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
   .la-tip { position: absolute; z-index: 2; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .la-tip div:first-child { color: var(--cds-text-secondary); }
   .la-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
@@ -105,7 +108,23 @@
           <button type="button" class="bd-small bd-show-all">Show all charts</button>
         </div>
       </details>
-      <select id="year" data-draw="year" data-source="summary" aria-label="Year"></select>
+      <select id="period" aria-label="Period">
+        <option value="all">All time</option>
+        <option value="7d">Past week</option>
+        <option value="1m">Past month</option>
+        <option value="3m">Past 3 months</option>
+        <option value="6m">Past 6 months</option>
+        <option value="1y">Past year</option>
+        <option value="ytd">This year so far</option>
+        <optgroup label="Calendar year" id="period-years"></optgroup>
+        <option value="custom">Pick dates…</option>
+      </select>
+      <span class="bd-dates" hidden>
+        <input type="date" id="from" aria-label="From date">
+        <span>to</span>
+        <input type="date" id="to" aria-label="To date">
+      </span>
+      <select id="year" data-draw="year" data-source="summary" aria-label="Year" hidden></select>
       <select id="day" class="la-day" aria-label="Day of the week">
         <option value="all">Any day</option>
         <option value="Sunday">Sundays</option>
@@ -123,6 +142,8 @@
       </div>
     </div>
   </div>
+
+  <p class="la-zoomhint">Tip: hold Ctrl and scroll over a chart to zoom in, or hold Ctrl and drag across part of it. Double-click a chart to zoom back out.</p>
 
   <section id="regiment" class="la-page" role="tabpanel" aria-labelledby="tab-regiment">
     <div class="la-tiles">
@@ -357,7 +378,8 @@ dash.calc('summary', {
     const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const rs0 = attendance.map((r) => ({ ...r, year: r.date.slice(0, 4), day: DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()] }));
     const first = new Map();
-    for (const r of rs0) { const f = first.get(r.name); if (!f || r.date < f) first.set(r.name, r.date); }
+    for (const r of rs0) { const d = r.first_ever ?? r.date; const f = first.get(r.name); if (!f || d < f) first.set(r.name, d); }
+    const lo = rs0.reduce((m, r) => (r.date < m ? r.date : m), '9999');
     const years = [...new Set(rs0.map((r) => r.year))].sort();
     const out = [];
     for (const kind of ['all', 'event', 'drill']) for (const day of ['all', ...DAYS]) {
@@ -366,7 +388,7 @@ dash.calc('summary', {
         const rs = rs0.filter((r) => (kind === 'all' || r.kind === kind) && (day === 'all' || r.day === day) && (year === 'all' || r.year === year));
         const posts = new Set(rs.map((r) => r.post)).size;
         const names = new Set(rs.map((r) => r.name));
-        const fresh = [...names].filter((n) => year === 'all' || first.get(n).slice(0, 4) === year).length;
+        const fresh = [...names].filter((n) => (year === 'all' ? first.get(n) >= lo : first.get(n).slice(0, 4) === year)).length;
         const row = { kind, day, year, posts, turnout: rs.length, avg: posts ? Math.round(rs.length / posts * 10) / 10 : null, people: names.size, new_people: fresh };
         const p = year === 'all' ? null : prev;
         row.prev_year = p && p.posts && posts ? p.year : null;
@@ -637,11 +659,84 @@ function labelCats(cats, xAt, svg, H, label) {
   }
 }
 
+// Zoom: Ctrl+scroll or Ctrl+drag on a chart narrows it to a run of categories; double-click or Reset zoom undoes it.
+function zoomWindow(el, cats, redraw) {
+  el._redraw = redraw;
+  const z = el._zoom;
+  if (!z) return cats;
+  const i0 = cats.indexOf(z[0]), i1 = cats.indexOf(z[1]);
+  if (i0 < 0 || i1 <= i0) { el._zoom = null; return cats; }
+  return cats.slice(i0, i1 + 1);
+}
+
+function attachZoom(el, svg, rect, all, shown, pos, H) {
+  if (all.length < 4) return;
+  const off = all.indexOf(shown[0]);
+  const nearest = (px) => {
+    let b = 0;
+    for (let i = 1; i < shown.length; i++) if (Math.abs(pos(shown[i]) - px) < Math.abs(pos(shown[b]) - px)) b = i;
+    return b;
+  };
+  const set = (a, b) => {
+    a = Math.max(0, a); b = Math.min(all.length - 1, b);
+    el._zoom = a === 0 && b === all.length - 1 ? null : [all[a], all[b]];
+    el.replaceChildren();
+    el._redraw();
+  };
+  rect.on('wheel', (ev) => {
+    if (!ev.ctrlKey && !ev.metaKey) return;
+    ev.preventDefault();
+    const n = shown.length;
+    const c = nearest(d3.pointer(ev, svg.node())[0]);
+    let w = Math.round(n * (ev.deltaY < 0 ? 0.75 : 1 / 0.75));
+    if (w === n) w += ev.deltaY < 0 ? -1 : 1;
+    w = Math.max(3, Math.min(all.length, w));
+    if (w === n) return;
+    let a = off + Math.round(c - (c / Math.max(1, n - 1)) * (w - 1));
+    let b = a + w - 1;
+    if (a < 0) { b -= a; a = 0; }
+    if (b > all.length - 1) { a = Math.max(0, a - (b - all.length + 1)); b = all.length - 1; }
+    set(a, b);
+  });
+  const sel = svg.append('rect').attr('class', 'la-zoomsel').attr('y', 8).attr('height', H - 30).attr('visibility', 'hidden');
+  let start = null;
+  rect.on('pointerdown.zoom', (ev) => {
+    if (!ev.ctrlKey && !ev.metaKey) return;
+    ev.preventDefault();
+    start = d3.pointer(ev, svg.node())[0];
+    rect.node().setPointerCapture(ev.pointerId);
+    sel.attr('x', start).attr('width', 0).attr('visibility', 'visible');
+  });
+  rect.on('pointermove.zoom', (ev) => {
+    if (start == null) return;
+    const px = d3.pointer(ev, svg.node())[0];
+    sel.attr('x', Math.min(start, px)).attr('width', Math.abs(px - start));
+  });
+  rect.on('pointerup.zoom', (ev) => {
+    if (start == null) return;
+    const px = d3.pointer(ev, svg.node())[0];
+    const a = nearest(Math.min(start, px)), b = nearest(Math.max(start, px));
+    start = null;
+    sel.attr('visibility', 'hidden');
+    if (b > a) set(off + a, off + b);
+  });
+  rect.on('dblclick.zoom', () => { if (el._zoom) set(0, all.length - 1); });
+  if (el._zoom) {
+    const reset = document.createElement('button');
+    reset.type = 'button';
+    reset.className = 'la-zoomreset';
+    reset.textContent = 'Reset zoom';
+    reset.addEventListener('click', () => set(0, all.length - 1));
+    el.append(reset);
+  }
+}
+
 // Line chart over months. series: [{name, color, values: Map(month -> number)}]
-function lineChart(el, months, series, o = {}) {
+function lineChart(el, allMonths, series, o = {}) {
+  const months = zoomWindow(el, allMonths, () => lineChart(el, allMonths, series, o));
   const W = Math.max(240, el.clientWidth), H = o.height ?? 240;
   const svg = d3.select(el).append('svg').attr('class', 'la-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
-  const yMax = o.yMax ?? (d3.max(series.flatMap((s) => [...s.values.values()])) || 1);
+  const yMax = o.yMax ?? (d3.max(series.flatMap((s) => months.map((m) => s.values.get(m) ?? 0))) || 1);
   const y = d3.scaleLinear([0, yMax], [H - 22, 8]).nice(o.yTicks ?? 4);
   const ticks = y.ticks(o.yTicks ?? 4);
   const l = measure(svg, ticks.map((t) => fmt(t))) + 8;
@@ -665,7 +760,9 @@ function lineChart(el, months, series, o = {}) {
   const rule = svg.append('line').attr('class', 'la-rule').attr('y1', 8).attr('y2', H - 22).attr('visibility', 'hidden');
   const dots = series.map((sr) => svg.append('circle').attr('r', 3.5).style('fill', sr.color).attr('visibility', 'hidden'));
   const tip = makeTip(el);
-  svg.append('rect').attr('x', l).attr('y', 0).attr('width', W - l).attr('height', H).attr('fill', 'transparent')
+  const lineRect = svg.append('rect').attr('x', l).attr('y', 0).attr('width', W - l).attr('height', H).attr('fill', 'transparent');
+  attachZoom(el, svg, lineRect, allMonths, months, x, H);
+  lineRect
     .on('pointermove', (ev) => {
       const [px] = d3.pointer(ev);
       const scale = el.clientWidth / W;
@@ -683,14 +780,16 @@ function lineChart(el, months, series, o = {}) {
       })));
     })
     .on('pointerleave', () => { rule.attr('visibility', 'hidden'); dots.forEach((d) => d.attr('visibility', 'hidden')); tip(); });
+  lineRect.raise();
 }
 
 // Bar chart over months, grouped or stacked. series: [{name, color, values: Map(month -> number)}]
-function barChart(el, months, series, o = {}) {
+function barChart(el, allMonths, series, o = {}) {
+  const months = zoomWindow(el, allMonths, () => barChart(el, allMonths, series, o));
   const W = Math.max(240, el.clientWidth), H = o.height ?? 180;
   const svg = d3.select(el).append('svg').attr('class', 'la-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
   const total = (m) => d3.sum(series, (s) => s.values.get(m) ?? 0);
-  const yMax = (o.stack ? d3.max(months, total) : d3.max(series.flatMap((s) => [...s.values.values()]))) || 1;
+  const yMax = (o.stack ? d3.max(months, total) : d3.max(series.flatMap((s) => months.map((m) => s.values.get(m) ?? 0)))) || 1;
   const y = d3.scaleLinear([0, yMax], [H - 22, 8]).nice(4);
   const ticks = y.ticks(4).filter((t) => o.decimals || Number.isInteger(t));
   const l = measure(svg, ticks.map((t) => fmt(t))) + 8;
@@ -716,7 +815,9 @@ function barChart(el, months, series, o = {}) {
   }
   const tip = makeTip(el);
   const hl = svg.append('rect').attr('fill', 'var(--color-fg)').attr('opacity', 0.06).attr('visibility', 'hidden').attr('y', 8).attr('height', H - 30);
-  svg.append('rect').attr('x', l).attr('y', 0).attr('width', W - l).attr('height', H).attr('fill', 'transparent')
+  const barRect = svg.append('rect').attr('x', l).attr('y', 0).attr('width', W - l).attr('height', H).attr('fill', 'transparent');
+  attachZoom(el, svg, barRect, allMonths, months, (m) => x(m) + x.bandwidth() / 2, H);
+  barRect.raise()
     .on('pointermove', (ev) => {
       const [px] = d3.pointer(ev);
       const m = months[Math.max(0, Math.min(months.length - 1, Math.floor((px - (l + 2)) / x.step())))];
@@ -728,7 +829,7 @@ function barChart(el, months, series, o = {}) {
       tip((x(m) + x.bandwidth() / 2) * scale, y(o.stack ? total(m) : d3.max(series, (s) => s.values.get(m) ?? 0)) * scale, o.tipTitle ? o.tipTitle(m) : monthName(monthParse(m)), lines.length ? lines : [{ text: 'None' }]);
     })
     .on('click', (ev) => {
-      if (!o.onPick) return;
+      if (!o.onPick || ev.ctrlKey || ev.metaKey) return;
       const [px] = d3.pointer(ev);
       o.onPick(months[Math.max(0, Math.min(months.length - 1, Math.floor((px - (l + 2)) / x.step())))]);
     })
@@ -736,7 +837,10 @@ function barChart(el, months, series, o = {}) {
 }
 
 // One dot per event or drill over time. points: [{date, value, color, name}]
-function postChart(el, points, o = {}) {
+function postChart(el, allPoints, o = {}) {
+  const allDays = [...new Set(allPoints.map((p) => p.date))].sort();
+  const days = zoomWindow(el, allDays, () => postChart(el, allPoints, o));
+  const points = allPoints.filter((p) => p.date >= days[0] && p.date <= days[days.length - 1]);
   const W = Math.max(240, el.clientWidth), H = o.height ?? 240;
   const svg = d3.select(el).append('svg').attr('class', 'la-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
   const y = d3.scaleLinear([0, d3.max(points, (p) => p.value) || 1], [H - 22, 8]).nice(4);
@@ -764,7 +868,9 @@ function postChart(el, points, o = {}) {
   for (const p of pts) g.append('circle').attr('cx', p.cx).attr('cy', p.cy).attr('r', r).style('fill', p.color).attr('fill-opacity', 0.8);
   const ring = svg.append('circle').attr('r', r + 3).attr('fill', 'none').attr('stroke-width', 2).attr('visibility', 'hidden');
   const tip = makeTip(el);
-  svg.append('rect').attr('x', l).attr('y', 0).attr('width', W - l).attr('height', H).attr('fill', 'transparent')
+  const postRect = svg.append('rect').attr('x', l).attr('y', 0).attr('width', W - l).attr('height', H).attr('fill', 'transparent');
+  attachZoom(el, svg, postRect, allDays, days, (d) => x(new Date(d + 'T00:00:00Z')), H);
+  postRect.raise()
     .on('pointermove', (ev) => {
       const [px, py] = d3.pointer(ev);
       const best = d3.least(pts, (p) => (p.cx - px) ** 2 + ((p.cy - py) / 3) ** 2);

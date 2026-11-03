@@ -305,6 +305,71 @@
     for (const dl of document.querySelectorAll('#bd-people')) dl.replaceChildren(...names.map((n) => new Option(n)));
   });
 
+  // ---------- period picker ----------
+  const period = document.getElementById('period');
+  const fromEl = document.getElementById('from');
+  const toEl = document.getElementById('to');
+  const iso = (d) => d3.utcFormat('%Y-%m-%d')(d);
+  const todayIso = () => { const n = new Date(); return iso(new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()))); };
+  function presetRange(v) {
+    const t = new Date(todayIso() + 'T00:00:00Z');
+    const back = { '7d': d3.utcDay.offset(t, -7), '1m': d3.utcMonth.offset(t, -1), '3m': d3.utcMonth.offset(t, -3), '6m': d3.utcMonth.offset(t, -6), '1y': d3.utcYear.offset(t, -1), ytd: d3.utcYear.floor(t) }[v];
+    return back ? [iso(back), iso(t)] : null;
+  }
+  function choose(v) {
+    if (v === 'all') dash.setParams({ period: 'all', year: 'all', from: null, to: null });
+    else if (v.startsWith('y:')) dash.setParams({ period: v, year: v.slice(2), from: null, to: null });
+    else if (v === 'custom') {
+      const p = dash.params();
+      const [f, t] = [p.from || fromEl.min || '', p.to || todayIso()];
+      dash.setParams({ period: 'custom', year: 'all', from: f || null, to: t || null });
+    } else {
+      const [f, t] = presetRange(v);
+      dash.setParams({ period: v, year: 'all', from: f, to: t });
+    }
+  }
+  if (period) {
+    period.addEventListener('change', () => choose(period.value));
+    for (const input of [fromEl, toEl]) {
+      input.addEventListener('change', () => {
+        if (input.value && !input.validity.valid) return;
+        let f = fromEl.value || null, t = toEl.value || null;
+        if (f && t && f > t) [f, t] = [t, f];
+        dash.setParams({ period: 'custom', year: 'all', from: f, to: t });
+      });
+    }
+  }
+  let yearsFilled = false;
+  dash.onData(() => {
+    const p = dash.params();
+    if (!period) return;
+    const raw = dash.data('attendance');
+    if (!yearsFilled && raw.status === 'ok' && !(p.from || p.to)) {
+      yearsFilled = true;
+      const dates = raw.data.map((r) => r.date);
+      const lo = d3.min(dates), hi = d3.max(dates);
+      fromEl.min = toEl.min = lo;
+      fromEl.max = toEl.max = todayIso() > hi ? todayIso() : hi;
+      const years = [...new Set(dates.map((d) => d.slice(0, 4)))].sort().reverse();
+      for (const g of document.querySelectorAll('#period-years')) g.replaceChildren(...years.map((y) => new Option(y, 'y:' + y)));
+    }
+    period.value = p.period || (p.year && p.year !== 'all' ? 'y:' + p.year : 'all');
+    for (const d of document.querySelectorAll('.bd-dates')) d.hidden = period.value !== 'custom';
+    if (document.activeElement !== fromEl) fromEl.value = p.from || '';
+    if (document.activeElement !== toEl) toEl.value = p.to || '';
+  });
+  const short = (d) => d3.utcFormat('%b %-d, %Y')(new Date(d + 'T00:00:00Z'));
+  const PRESET_NAMES = { '7d': 'Past week', '1m': 'Past month', '3m': 'Past 3 months', '6m': 'Past 6 months', '1y': 'Past year', ytd: 'This year so far' };
+  dash.draw('period', (el) => {
+    const p = P();
+    let text;
+    if (p.from || p.to) {
+      const span = `${p.from ? short(p.from) : 'the start'} to ${p.to ? short(p.to) : 'today'}`;
+      text = PRESET_NAMES[p.period] ? `${PRESET_NAMES[p.period]} (${span})` : `From ${span}`;
+    } else text = p.year === 'all' ? 'All time' : 'In ' + p.year;
+    el.textContent = text + (p.day === 'all' ? '' : ', ' + p.day + 's only');
+  });
+
   // A shared link opens the builder with that chart loaded.
   function openShared() {
     const m = location.hash.match(/^#chart=(.+)$/);

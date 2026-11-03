@@ -84,7 +84,7 @@
 
   <header class="la-head">
     <h1>6th Louisiana attendance</h1>
-    <p class="la-lede"><span data-draw="period">—</span>: an average of <b data-draw="lede" data-k="event" data-f="avg" data-source="summary" data-field="avg">—</b> men per event and <b data-draw="lede" data-k="drill" data-f="avg" data-source="summary" data-field="avg">—</b> per drill, from <b data-draw="lede" data-k="all" data-f="people" data-source="summary" data-field="people">—</b> different people.</p>
+    <p class="la-lede"><span data-draw="period">—</span>: average attendance of <b data-draw="lede" data-k="event" data-f="avg" data-source="summary" data-field="avg">—</b> at events and <b data-draw="lede" data-k="drill" data-f="avg" data-source="summary" data-field="avg">—</b> at drills, from <b data-draw="lede" data-k="all" data-f="people" data-source="summary" data-field="people">—</b> different people.</p>
   </header>
 
   <div class="la-bar">
@@ -93,8 +93,17 @@
       <button id="tab-companies" role="tab" data-tab="companies" aria-selected="false">Companies</button>
       <button id="tab-people" role="tab" data-tab="people" aria-selected="false">People</button>
       <button id="tab-checks" role="tab" data-tab="checks" aria-selected="false">Name checks</button>
+      <button id="tab-builder" role="tab" data-tab="builder" aria-selected="false">Build a chart</button>
     </div>
     <div class="la-filters">
+      <details class="bd-choose">
+        <summary>Choose charts</summary>
+        <div class="bd-choose-panel">
+          <p>Untick a chart to hide it. Your choice is saved in this browser.</p>
+          <div class="bd-choose-list"></div>
+          <button type="button" class="bd-small bd-show-all">Show all charts</button>
+        </div>
+      </details>
       <select id="year" data-draw="year" data-source="summary" aria-label="Year"></select>
       <select id="day" class="la-day" aria-label="Day of the week">
         <option value="all">Any day</option>
@@ -118,29 +127,29 @@
     <div class="la-tiles">
       <div class="la-tile"><span>Events held</span><b class="la-num" data-draw="tile" data-k="event" data-f="posts" data-source="summary" data-field="posts">—</b><div class="la-delta" data-draw="delta" data-k="event" data-f="posts_change" data-source="summary" data-field="posts_change">—</div></div>
       <div class="la-tile"><span>Drills held</span><b class="la-num" data-draw="tile" data-k="drill" data-f="posts" data-source="summary" data-field="posts">—</b><div class="la-delta" data-draw="delta" data-k="drill" data-f="posts_change" data-source="summary" data-field="posts_change">—</div></div>
-      <div class="la-tile"><span>Average at an event</span><b class="la-num" data-draw="tile" data-k="event" data-f="avg" data-source="summary" data-field="avg">—</b><div class="la-delta" data-draw="delta" data-k="event" data-f="avg_change" data-source="summary" data-field="avg_change">—</div></div>
-      <div class="la-tile"><span>Average at a drill</span><b class="la-num" data-draw="tile" data-k="drill" data-f="avg" data-source="summary" data-field="avg">—</b><div class="la-delta" data-draw="delta" data-k="drill" data-f="avg_change" data-source="summary" data-field="avg_change">—</div></div>
+      <div class="la-tile"><span>Average event attendance</span><b class="la-num" data-draw="tile" data-k="event" data-f="avg" data-source="summary" data-field="avg">—</b><div class="la-delta" data-draw="delta" data-k="event" data-f="avg_change" data-source="summary" data-field="avg_change">—</div></div>
+      <div class="la-tile"><span>Average drill attendance</span><b class="la-num" data-draw="tile" data-k="drill" data-f="avg" data-source="summary" data-field="avg">—</b><div class="la-delta" data-draw="delta" data-k="drill" data-f="avg_change" data-source="summary" data-field="avg_change">—</div></div>
       <div class="la-tile"><span>Different people</span><b class="la-num" data-draw="tile" data-k="all" data-f="people" data-source="summary" data-field="people">—</b><div class="la-delta" data-draw="delta" data-k="all" data-f="people_change" data-source="summary" data-field="people_change">—</div></div>
       <div class="la-tile"><span>First-timers</span><b class="la-num" data-draw="tile" data-k="all" data-f="new_people" data-source="summary" data-field="new_people">—</b><div class="la-delta" data-draw="delta" data-k="all" data-f="new_people_change" data-source="summary" data-field="new_people_change">—</div></div>
     </div>
 
     <div class="la-card" id="turnout">
-      <h2>Turnout per post, by month</h2>
-      <p>Average number of names on each #attendance or #drill-attendance post that month. Change from the year before is under each figure above when one year is picked.</p>
+      <h2>Average attendance, by month</h2>
+      <p>How many people attended a typical event or drill each month. When one year is picked, the change from the year before shows under each figure above.</p>
       <div class="la-legend"><span class="la-lg-event"><i class="la-sw-event"></i>Events</span><span class="la-lg-drill"><i class="la-sw-drill"></i>Drills</span></div>
       <div class="la-chart" data-draw="turnout" data-source="monthly"></div>
     </div>
 
     <div class="la-grid">
       <div class="la-card" id="by-day">
-        <h2>Turnout by day of the week</h2>
-        <p>Average names per post on each day, for the year picked. Click a day to filter every chart to it.</p>
+        <h2>Average attendance by day of the week</h2>
+        <p>For the year picked. Click a day to filter every chart to it.</p>
         <div class="la-legend"><span class="la-lg-event"><i class="la-sw-event"></i>Events</span><span class="la-lg-drill"><i class="la-sw-drill"></i>Drills</span></div>
         <div class="la-chart la-short" data-draw="by-day" data-source="summary"></div>
       </div>
       <div class="la-card" id="day-trends">
-        <h2>Each day's turnout per post, by month</h2>
-        <p>One chart per day that had posts, on the same scale, so a slipping day stands out.</p>
+        <h2>Average attendance for each day, by month</h2>
+        <p>One chart per day that had events or drills, on the same scale, so a slipping day stands out.</p>
         <div class="la-minis" data-draw="day-minis" data-source="monthly"></div>
       </div>
     </div>
@@ -148,29 +157,33 @@
     <div class="la-grid">
       <div class="la-card" id="held">
         <h2>Events and drills held, by month</h2>
-        <p>One post is one event or drill.</p>
+        <p>How many events and drills were held each month.</p>
         <div class="la-legend"><span class="la-lg-event"><i class="la-sw-event"></i>Events</span><span class="la-lg-drill"><i class="la-sw-drill"></i>Drills</span></div>
         <div class="la-chart la-short" data-draw="held" data-source="monthly"></div>
       </div>
       <div class="la-card" id="mix">
-        <h2>Who fills the line, by month</h2>
-        <p>Names counted per month, stacked by the company header they were listed under.</p>
+        <h2>Total attendance by company, by month</h2>
+        <p>Everyone marked present that month, stacked by the company they were listed under.</p>
         <div class="la-chart la-short" data-draw="mix" data-source="company_monthly"></div>
         <div class="la-legend" data-draw="mix-legend" data-source="company_monthly"></div>
       </div>
+    </div>
+    <div class="bd-saved-section" hidden>
+      <h2 class="bd-section-title">Your charts</h2>
+      <div class="la-grid" data-draw="bd-saved"></div>
     </div>
   </section>
 
   <section id="companies" class="la-page" role="tabpanel" aria-labelledby="tab-companies" hidden>
     <div class="la-card" id="company-table">
       <h2>Companies</h2>
-      <p>Turnout is every appearance of a company's men on a post. Share is that company's part of all turnout. Companies come from the header each name was listed under, so a recruit counts under Recruits until he appears under a company.</p>
+      <p>Total attendance counts every time one of a company's men was marked present. Share is that company's part of all attendance. Company comes from where each name was listed, so a recruit counts under Recruits until he is listed under a company.</p>
       <div class="la-tablebox">
         <table class="la-table" data-source="companies" data-row-key="kind,day,year,company">
           <thead><tr>
             <th data-field="company">Company</th>
-            <th class="la-n" data-field="turnout">Turnout</th>
-            <th class="la-n" data-field="avg">Per post</th>
+            <th class="la-n" data-field="turnout">Total attendance</th>
+            <th class="la-n" data-field="avg">Average attendance</th>
             <th class="la-n" data-field="share">Share</th>
             <th class="la-n" data-field="people">Different people</th>
           </tr></thead>
@@ -179,7 +192,7 @@
       </div>
     </div>
     <div class="la-card" id="company-trends">
-      <h2>Each company's turnout per post, by month</h2>
+      <h2>Each company's average attendance, by month</h2>
       <p>Same scale on every chart, so heights compare across companies.</p>
       <div class="la-minis" data-draw="minis" data-source="company_monthly"></div>
     </div>
@@ -254,7 +267,7 @@
           <thead><tr>
             <th data-field="name">Name</th>
             <th data-field="companies">Companies, in order</th>
-            <th class="la-n" data-field="turnout">Appearances</th>
+            <th class="la-n" data-field="turnout">Attended</th>
             <th data-field="first_seen">First seen</th>
             <th data-field="last_seen">Last seen</th>
           </tr></thead>
@@ -263,13 +276,73 @@
       </div>
     </div>
   </section>
+  <section id="builder" class="la-page" role="tabpanel" aria-labelledby="tab-builder" hidden>
+    <div class="la-card" id="builder-form">
+      <h2>Build a chart</h2>
+      <p>Pick what to show and how to break it down. The year, day and type filters at the top apply here too. Charts you add appear here and at the bottom of the Regiment tab, saved in this browser. Use Copy link to share one.</p>
+      <div class="bd-form">
+        <label for="bd-measure">Show
+          <select id="bd-measure">
+            <option value="avg">Average attendance</option>
+            <option value="total">Total attendance</option>
+            <option value="held">Events and drills held</option>
+            <option value="people">Different people</option>
+          </select>
+        </label>
+        <label for="bd-x">Across
+          <select id="bd-x">
+            <option value="month">Month</option>
+            <option value="quarter">Quarter</option>
+            <option value="year">Year</option>
+            <option value="day">Day of the week</option>
+            <option value="company">Company</option>
+          </select>
+        </label>
+        <label for="bd-split">Split by
+          <select id="bd-split">
+            <option value="none">Nothing</option>
+            <option value="kind">Event or drill</option>
+            <option value="company">Company</option>
+            <option value="day">Day of the week</option>
+          </select>
+        </label>
+        <label for="bd-type">Chart
+          <select id="bd-type">
+            <option value="line">Line</option>
+            <option value="bars">Bars</option>
+            <option value="stacked">Stacked bars</option>
+          </select>
+        </label>
+        <label for="bd-company">Company
+          <select id="bd-company"><option value="all">All companies</option></select>
+        </label>
+        <label for="bd-person">Person
+          <input id="bd-person" list="bd-people" placeholder="Anyone" autocomplete="off">
+          <datalist id="bd-people"></datalist>
+        </label>
+        <label for="bd-title" class="bd-wide">Title
+          <input id="bd-title" placeholder="Optional">
+        </label>
+      </div>
+      <p class="bd-preview-desc"></p>
+      <div class="la-legend bd-preview-legend"></div>
+      <div class="la-chart" data-draw="bd-preview"></div>
+      <div class="bd-actions">
+        <button type="button" id="bd-add" class="bd-primary">Add to my charts</button>
+        <span class="bd-added" hidden>Added. It's below and on the Regiment tab.</span>
+      </div>
+    </div>
+    <h2 class="bd-section-title">My charts</h2>
+    <p class="bd-saved-empty">No charts yet. Build one above and click Add to my charts.</p>
+    <div class="la-grid bd-manage" data-draw="bd-saved"></div>
+  </section>
 </div>
 
 <script>
 dash.calc('summary', {
   inputs: ['attendance'],
   title: 'Totals by year, type and day',
-  description: 'Posts held, names counted, average per post, different people and first-timers for each year, type and day of the week, with the change from the year before.',
+  description: 'Events and drills held, total attendance, average attendance, different people and first-timers for each year, type and day of the week, with the change from the year before.',
   fn: (attendance) => {
     const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const rs0 = attendance.map((r) => ({ ...r, year: r.date.slice(0, 4), day: DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()] }));
@@ -301,8 +374,8 @@ dash.calc('summary', {
 
 dash.calc('monthly', {
   inputs: ['attendance'],
-  title: 'Turnout by month',
-  description: 'For each month, type and day of the week: posts held, names counted and average names per post.',
+  title: 'Attendance by month',
+  description: 'For each month, type and day of the week: events and drills held, total attendance and average attendance.',
   fn: (attendance) => {
     const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const m = new Map();
@@ -321,8 +394,8 @@ dash.calc('monthly', {
 
 dash.calc('companies', {
   inputs: ['attendance'],
-  title: 'Turnout by company',
-  description: 'For each type, year, day of the week and company header: names counted, average per post held, share of all names counted, and different people.',
+  title: 'Attendance by company',
+  description: 'For each type, year, day of the week and company header: total attendance, average attendance, share of all attendance, and different people.',
   fn: (attendance) => {
     const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const rs0 = attendance.map((r) => ({ ...r, year: r.date.slice(0, 4), day: DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()] }));
@@ -341,8 +414,8 @@ dash.calc('companies', {
 
 dash.calc('company_monthly', {
   inputs: ['attendance'],
-  title: 'Company turnout by month',
-  description: 'For each month, type, day of the week and company header: names counted and average per post held that month.',
+  title: 'Company attendance by month',
+  description: 'For each month, type, day of the week and company header: total attendance and average attendance that month.',
   fn: (attendance) => {
     const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const posts = new Map();
@@ -366,7 +439,7 @@ dash.calc('company_monthly', {
 dash.calc('people', {
   inputs: ['attendance'],
   title: 'Attendance by person',
-  description: 'For each year, day of the week and person: latest company, events and drills attended, rate over the posts held between their first and last appearance, and first and last dates seen.',
+  description: 'For each year, day of the week and person: latest company, events and drills attended, rate over the events and drills held between their first and last appearance, and first and last dates seen.',
   fn: (attendance) => {
     const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const rs0 = attendance.map((r) => ({ ...r, year: r.date.slice(0, 4), day: DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()] }));
@@ -528,6 +601,17 @@ function xLabels(months, x, svg, H, step) {
   });
 }
 
+function labelCats(cats, xAt, svg, H, label) {
+  let lastX = -Infinity;
+  for (const c of cats) {
+    const px = xAt(c);
+    const t = label(c);
+    if (t == null || px - lastX < Math.max(28, t.length * 7)) continue;
+    lastX = px;
+    svg.append('text').attr('x', px).attr('y', H - 4).attr('text-anchor', 'middle').text(t);
+  }
+}
+
 // Line chart over months. series: [{name, color, values: Map(month -> number)}]
 function lineChart(el, months, series, o = {}) {
   const W = Math.max(240, el.clientWidth), H = o.height ?? 240;
@@ -541,7 +625,8 @@ function lineChart(el, months, series, o = {}) {
     svg.append('line').attr('class', t === 0 ? 'la-axis' : 'la-gridline').attr('x1', l).attr('x2', W).attr('y1', y(t)).attr('y2', y(t));
     svg.append('text').attr('x', l - 6).attr('y', y(t) + 4).attr('text-anchor', 'end').text(fmt(t));
   }
-  xLabels(months, x, svg, H);
+  if (o.catLabel) labelCats(months, x, svg, H, o.catLabel);
+  else xLabels(months, x, svg, H);
   for (const s of series) {
     const line = d3.line().defined((m) => s.values.has(m)).x((m) => x(m)).y((m) => y(s.values.get(m)));
     svg.append('path').attr('fill', 'none').style('stroke', s.color).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('d', line(months));
@@ -562,7 +647,7 @@ function lineChart(el, months, series, o = {}) {
         dots[i].attr('cx', x(best)).attr('cy', v == null ? 0 : y(v)).attr('visibility', v == null ? 'hidden' : 'visible');
       });
       const top = d3.min(series, (sr) => (sr.values.has(best) ? y(sr.values.get(best)) : H));
-      tip(x(best) * scale, top * scale, monthName(monthParse(best)), series.map((sr) => ({
+      tip(x(best) * scale, top * scale, o.tipTitle ? o.tipTitle(best) : monthName(monthParse(best)), series.map((sr) => ({
         color: series.length > 1 ? sr.color : null,
         text: `${sr.name}: ${sr.values.has(best) ? (o.valueFmt ?? one)(sr.values.get(best)) : 'none'}${o.unit ?? ''}`,
       })));
@@ -585,9 +670,8 @@ function barChart(el, months, series, o = {}) {
     svg.append('line').attr('class', t === 0 ? 'la-axis' : 'la-gridline').attr('x1', l).attr('x2', W).attr('y1', y(t)).attr('y2', y(t));
     svg.append('text').attr('x', l - 6).attr('y', y(t) + 4).attr('text-anchor', 'end').text(fmt(t));
   }
-  if (o.catLabel) {
-    for (const m of months) svg.append('text').attr('x', x(m) + x.bandwidth() / 2).attr('y', H - 4).attr('text-anchor', 'middle').text(o.catLabel(m, x.bandwidth()));
-  } else xLabels(months, (m) => x(m) + x.bandwidth() / 2, svg, H);
+  if (o.catLabel) labelCats(months, (m) => x(m) + x.bandwidth() / 2, svg, H, (m) => o.catLabel(m, x.bandwidth()));
+  else xLabels(months, (m) => x(m) + x.bandwidth() / 2, svg, H);
   const r = Math.min(2, x.bandwidth() / 4);
   for (const m of months) {
     let base = 0;
@@ -628,7 +712,7 @@ function monthRange(list) {
 }
 
 // ---------- page controls (listen and set state only) ----------
-const tabs = ['regiment', 'companies', 'people', 'checks'];
+const tabs = ['regiment', 'companies', 'people', 'checks', 'builder'];
 let tab = tabs.includes(location.hash.slice(1)) ? location.hash.slice(1) : (location.hash.slice(1) === 'person' ? 'people' : 'regiment');
 function showTab(name, link = true) {
   tab = name;
@@ -721,7 +805,7 @@ dash.draw('turnout', (el) => {
   const months = monthRange(r);
   if (!months.length) return;
   const series = shownKinds().map((k) => ({ name: kindName[k], color: kindColor(k), values: new Map(r.filter((x) => x.kind === k && onDay(x) && inYear(x.month)).map((x) => [x.month, x.avg])) }));
-  lineChart(el, months, series, { height: 240, unit: ' per post' });
+  lineChart(el, months, series, { height: 240, unit: ' average' });
 });
 
 dash.draw('held', (el) => {
@@ -792,7 +876,7 @@ dash.draw('minis', (el) => {
     ch.className = 'la-chart';
     box.append(h, ch);
     el.append(box);
-    lineChart(ch, months, [{ name: c, color: companyColor(c), values: new Map(r.filter((x) => x.company === c).map((x) => [x.month, x.avg])) }], { height: 110, yMax, yTicks: 2, unit: ' per post' });
+    lineChart(ch, months, [{ name: c, color: companyColor(c), values: new Map(r.filter((x) => x.company === c).map((x) => [x.month, x.avg])) }], { height: 110, yMax, yTicks: 2, unit: ' average' });
   }
 });
 
@@ -874,7 +958,7 @@ dash.draw('by-day', (el) => {
   if (!days.length) return;
   const series = shownKinds().map((k) => ({ name: kindName[k], color: kindColor(k), values: new Map(r.filter((x) => x.kind === k).map((x) => [x.day, x.avg])) }));
   barChart(el, days, series, {
-    height: 180, decimals: true, valueFmt: one, unit: ' per post',
+    height: 180, decimals: true, valueFmt: one, unit: ' average',
     catLabel: (d, bw) => (bw < 34 ? d.slice(0, 2) : d.slice(0, 3)),
     tipTitle: (d) => d + 's',
     extra: (d) => shownKinds().map((k) => r.find((x) => x.kind === k && x.day === d)).filter(Boolean).map((x) => ({ text: `${kindName[x.kind]} held: ${fmt(x.posts)}` })),
@@ -897,7 +981,7 @@ dash.draw('day-minis', (el) => {
     ch.className = 'la-chart';
     box.append(h, ch);
     el.append(box);
-    lineChart(ch, months, [{ name: d, color: P().day === 'all' || d === P().day ? dash.colors[0] : 'var(--cds-chart-muted)', values: new Map(r.filter((x) => x.day === d).map((x) => [x.month, x.avg])) }], { height: 110, yMax, yTicks: 2, unit: ' per post' });
+    lineChart(ch, months, [{ name: d, color: P().day === 'all' || d === P().day ? dash.colors[0] : 'var(--cds-chart-muted)', values: new Map(r.filter((x) => x.day === d).map((x) => [x.month, x.avg])) }], { height: 110, yMax, yTicks: 2, unit: ' average' });
   }
 });
 
@@ -926,6 +1010,7 @@ dash.draw('multi-rows', (tb) => {
 });
 </script>
 
+<script src="builder.js"></script>
 <footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
 </main>
 </body>

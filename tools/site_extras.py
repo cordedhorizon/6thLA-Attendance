@@ -79,6 +79,7 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
             <option value="line">Line</option>
             <option value="bars">Bars</option>
             <option value="stacked">Stacked bars</option>
+            <option value="dots">Dots</option>
           </select>
         </label>
         <label for="bd-company">Company

@@ -68,7 +68,8 @@
     started = true;
     render();
     new MutationObserver((ms) => {
-      if (ms.some((m) => m.oldValue !== m.target.getAttribute('hidden'))) schedule();
+      // Ignore tooltips and other changes inside a drawing, or hovering would redraw the chart.
+      if (ms.some((m) => m.oldValue !== m.target.getAttribute('hidden') && !m.target.parentElement?.closest('[data-draw]'))) schedule();
     }).observe(document.body, { attributes: true, attributeFilter: ['hidden'], attributeOldValue: true, subtree: true });
     let w = window.innerWidth;
     window.addEventListener('resize', () => { if (window.innerWidth !== w) { w = window.innerWidth; schedule(); } });

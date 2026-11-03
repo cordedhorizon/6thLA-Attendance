@@ -14,7 +14,6 @@
   };
   const ACROSS = { post: 'Each event or drill', month: 'Month', quarter: 'Quarter', year: 'Year', day: 'Day of the week', company: 'Company' };
   const SPLITS = { none: 'Nothing', kind: 'Event or drill', company: 'Company', day: 'Day of the week' };
-  const TIME = ['month', 'quarter', 'year'];
 
   // ---------- choose charts ----------
   const cards = () => [...document.querySelectorAll('.la-page > .la-card[id], .la-page > .la-grid > .la-card[id]')]
@@ -79,12 +78,7 @@
     const perPost = form.x.value === 'post';
     for (const o of form.measure.options) o.disabled = perPost && o.value !== 'total';
     if (perPost) form.measure.value = 'total';
-    form.type.disabled = perPost;
-    const lineOk = TIME.includes(form.x.value);
-    form.type.querySelector('option[value="line"]').disabled = !lineOk;
-    if (!lineOk && form.type.value === 'line') form.type.value = 'bars';
-    for (const o of form.split.options) o.disabled = (o.value !== 'none' && o.value === form.x.value) || (perPost && o.value === 'company');
-    if (perPost && form.split.value === 'company') form.split.value = 'none';
+    for (const o of form.split.options) o.disabled = o.value !== 'none' && o.value === form.x.value;
     if (form.split.value === form.x.value) form.split.value = 'none';
   }
 
@@ -108,6 +102,7 @@
   };
   const sKey = { none: () => 'All', kind: (r) => kindName[r.kind], company: (r) => r.company, day: (r) => r.day };
 
+  let postInfo = new Map();
   function aggregate(cfg) {
     const all = rows('attendance');
     if (!all) return null;
@@ -140,25 +135,14 @@
       const denom = cfg.split === 'company' ? xPosts.get(c.x).size : c.posts.size;
       return Math.round(c.n / denom * 10) / 10;
     };
-    if (cfg.x === 'post') {
-      const ss = cfg.split === 'kind' ? ['Events', 'Drills'] : cfg.split === 'day' ? DAYS : ['All'];
-      const used = ss.filter((s) => [...cells.values()].some((c) => c.s === s));
-      const date = new Map(rs.map((r) => [r.post, r]));
-      const points = [...cells.values()].map((c) => {
-        const r = date.get(c.x);
-        const i = used.indexOf(c.s);
-        return {
-          date: r.date, day: r.day, value: c.n, name: cfg.split === 'none' ? '' : c.s,
-          color: cfg.split === 'kind' ? kindColor(c.s === 'Drills' ? 'drill' : 'event') : dash.colors[i % dash.colors.length],
-        };
-      }).sort((a, b) => a.date.localeCompare(b.date));
-      const series = used.map((s, i) => ({ name: s, color: cfg.split === 'kind' ? kindColor(s === 'Drills' ? 'drill' : 'event') : dash.colors[i % dash.colors.length] }));
-      return { xs: points, points, series: cfg.split === 'none' ? [] : series };
-    }
     let xs = [...new Set([...cells.values()].map((c) => c.x))];
     if (cfg.x === 'day') xs = DAYS.filter((d) => xs.includes(d));
     else if (cfg.x === 'company') xs.sort((a, b) => companyRank(a) - companyRank(b) || a.localeCompare(b));
-    else xs.sort();
+    else if (cfg.x === 'post') {
+      const info = new Map(rs.map((r) => [r.post, r]));
+      xs.sort((p, q) => info.get(p).date.localeCompare(info.get(q).date) || p.localeCompare(q));
+      postInfo = info;
+    } else xs.sort();
     if (cfg.x === 'month' && xs.length) xs = monthsBetween(xs[0], xs[xs.length - 1]);
     let ss = [...new Set([...cells.values()].map((c) => c.s))];
     if (cfg.split === 'day') ss = DAYS.filter((d) => ss.includes(d));
@@ -167,7 +151,7 @@
     const color = (s, i) => (cfg.split === 'kind' ? kindColor(s === 'Drills' ? 'drill' : 'event')
       : cfg.split === 'company' ? companyColor(s) : dash.colors[i % dash.colors.length]);
     const series = ss.map((s, i) => ({
-      name: cfg.split === 'none' ? MEASURES[cfg.measure] : s,
+      name: cfg.split !== 'none' ? s : cfg.x === 'post' ? 'Attendance' : MEASURES[cfg.measure],
       color: color(s, i),
       values: new Map([...cells.values()].filter((c) => c.s === s).map((c) => [c.x, value(c)])),
     }));
@@ -195,12 +179,21 @@
       decimals: cfg.measure === 'avg',
       stack: cfg.type === 'stacked',
     };
-    if (cfg.x === 'post') { postChart(el, a.points, { height }); return; }
+    if (cfg.x === 'post') {
+      const info = postInfo;
+      const firstOfYear = new Set();
+      let lastYear = null;
+      for (const p of a.xs) { const yr = info.get(p).date.slice(0, 4); if (yr !== lastYear) { firstOfYear.add(p); lastYear = yr; } }
+      opts.catLabel = (p) => (firstOfYear.has(p) ? info.get(p).date.slice(0, 4) : null);
+      opts.tipTitle = (p) => `${info.get(p).day} ${dayName(info.get(p).date)}`;
+      opts.connect = true;
+    }
     if (cfg.x === 'quarter') { opts.catLabel = qLabel; opts.tipTitle = (q) => `${q.slice(5)} ${q.slice(0, 4)}`; }
     if (cfg.x === 'year') { opts.catLabel = (y) => y; opts.tipTitle = (y) => y; }
     if (cfg.x === 'day') { opts.catLabel = (d, bw) => (bw < 34 ? d.slice(0, 2) : d.slice(0, 3)); opts.tipTitle = (d) => d + 's'; }
     if (cfg.x === 'company') { opts.catLabel = (c) => c; opts.tipTitle = (c) => c; }
-    if (cfg.type === 'line' && TIME.includes(cfg.x)) lineChart(el, a.xs, a.series, opts);
+    if (cfg.type === 'line') lineChart(el, a.xs, a.series, opts);
+    else if (cfg.type === 'dots') lineChart(el, a.xs, a.series, { ...opts, dots: true, noLine: true });
     else barChart(el, a.xs, a.series, opts);
   }
 

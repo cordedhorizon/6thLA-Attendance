@@ -320,6 +320,7 @@
             <option value="line">Line</option>
             <option value="bars">Bars</option>
             <option value="stacked">Stacked bars</option>
+            <option value="dots">Dots</option>
           </select>
         </label>
         <label for="bd-company">Company
@@ -653,7 +654,12 @@ function lineChart(el, months, series, o = {}) {
   else xLabels(months, x, svg, H);
   for (const s of series) {
     const line = d3.line().defined((m) => s.values.has(m)).x((m) => x(m)).y((m) => y(s.values.get(m)));
-    svg.append('path').attr('fill', 'none').style('stroke', s.color).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('d', line(months));
+    const along = o.connect ? months.filter((m) => s.values.has(m)) : months;
+    if (!o.noLine) svg.append('path').attr('fill', 'none').style('stroke', s.color).attr('stroke-width', o.dots ? 1.5 : 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('d', line(along));
+    if (o.dots) {
+      const r = along.length > 300 ? 2.2 : 3.5;
+      for (const m of along) svg.append('circle').attr('cx', x(m)).attr('cy', y(s.values.get(m))).attr('r', r).style('fill', s.color);
+    }
   }
   if (o.noTip) return;
   const rule = svg.append('line').attr('class', 'la-rule').attr('y1', 8).attr('y2', H - 22).attr('visibility', 'hidden');
@@ -671,7 +677,7 @@ function lineChart(el, months, series, o = {}) {
         dots[i].attr('cx', x(best)).attr('cy', v == null ? 0 : y(v)).attr('visibility', v == null ? 'hidden' : 'visible');
       });
       const top = d3.min(series, (sr) => (sr.values.has(best) ? y(sr.values.get(best)) : H));
-      tip(x(best) * scale, top * scale, o.tipTitle ? o.tipTitle(best) : monthName(monthParse(best)), series.map((sr) => ({
+      tip(x(best) * scale, top * scale, o.tipTitle ? o.tipTitle(best) : monthName(monthParse(best)), series.filter((sr) => !o.connect || sr.values.has(best)).map((sr) => ({
         color: series.length > 1 ? sr.color : null,
         text: `${sr.name}: ${sr.values.has(best) ? (o.valueFmt ?? one)(sr.values.get(best)) : 'none'}${o.unit ?? ''}`,
       })));

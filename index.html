@@ -1,0 +1,932 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>6th Louisiana Attendance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<link rel="stylesheet" href="site.css">
+<script src="d3.min.js"></script>
+<script src="dash-shim.js"></script>
+</head>
+<body>
+<main class="site">
+<style>
+  .la { display: flex; flex-direction: column; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); }
+  .la-sample { margin: 0; padding: var(--cds-pad-sm) var(--cds-pad-md); border: 1px dashed var(--color-border-line); border-radius: var(--cds-radius); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .la-sample b { color: var(--color-warn); font-weight: 600; }
+  .la-head { display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
+  .la-head h1 { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); text-wrap: balance; }
+  .la-lede { margin: 0; color: var(--color-fg-muted); max-width: 70ch; }
+  .la .la-lede b { color: var(--color-fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .la-bar { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-md); align-items: center; justify-content: space-between; }
+  .la-tabs, .la-seg { display: flex; flex-wrap: wrap; gap: 2px; padding: 2px; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); }
+  .la-tabs button, .la-seg button { font: inherit; font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 0; border-radius: var(--cds-radius); background: transparent; color: var(--color-fg-muted); cursor: pointer; }
+  .la-tabs button[aria-selected="true"], .la-seg button[aria-pressed="true"] { background: var(--color-bg); color: var(--color-fg); box-shadow: 0 0 0 1px var(--color-border-line); }
+  .la-tabs button:focus-visible, .la-seg button:focus-visible, .la-filters select:focus-visible, .la-search:focus-visible { outline: 2px solid var(--color-fg-muted); outline-offset: 1px; }
+  .la-filters { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; }
+  .la-filters select, .la-search { font: inherit; font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); }
+  .la-page { display: flex; flex-direction: column; gap: var(--cds-gap-md); }
+  .la-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr)); gap: var(--cds-gap-md); }
+  .la-tile { display: flex; flex-direction: column; gap: var(--cds-gap-xs); padding: var(--cds-pad-md); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); }
+  .la-tile span { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .la .la-num { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .la-delta { font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; color: var(--color-fg-muted); min-height: 1.2em; }
+  .la-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--cds-gap-md); }
+  .la-card { min-width: 0; display: flex; flex-direction: column; gap: var(--cds-gap-sm); padding: var(--cds-pad-lg); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); }
+  .la-card h2, .la-card h3 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
+  .la-card > p { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); max-width: 75ch; }
+  .la-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .la-legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .la-legend i { width: 10px; height: 10px; border-radius: 2px; background: var(--color-fg-muted); }
+  .la-chart { position: relative; min-height: 240px; }
+  .la-chart.la-short { min-height: 180px; }
+  .la-minis { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); gap: var(--cds-gap-md); min-height: 150px; }
+  .la-mini { display: flex; flex-direction: column; gap: 2px; }
+  .la-mini h4 { margin: 0; font-size: var(--cds-font-size-caption); font-weight: var(--cds-font-weight-medium); }
+  .la-mini .la-chart { min-height: 110px; }
+  .la-svg { display: block; overflow: visible; }
+  .la-svg text { fill: var(--color-fg-muted); font-size: 11px; font-family: var(--font-anthropic-sans); font-variant-numeric: tabular-nums; }
+  .la-gridline { stroke: var(--cds-chart-grid); stroke-width: 1; }
+  .la-axis { stroke: var(--cds-chart-axis); stroke-width: 1; }
+  .la-rule { stroke: var(--cds-chart-reference); stroke-width: 1; }
+  .la-tip { position: absolute; z-index: 2; pointer-events: none; background: var(--cds-surface-popover); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); box-shadow: var(--cds-shadow-popover); padding: var(--cds-pad-xs) var(--cds-pad-sm); font-size: var(--cds-font-size-caption); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .la-tip div:first-child { color: var(--cds-text-secondary); }
+  .la-tip i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; }
+  .la-failed { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: inherit; height: 100%; color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .la-failed::before { content: ""; width: .375rem; height: .375rem; border-radius: 50%; background: var(--color-bad); }
+  .la-tablebox { max-height: 34rem; overflow: auto; }
+  .la-table { width: 100%; border-collapse: collapse; font-size: var(--cds-font-size-caption); font-variant-numeric: tabular-nums; }
+  .la-table th { position: sticky; top: 0; background: var(--color-panel); text-align: left; font-weight: var(--cds-font-weight-medium); color: var(--color-fg-muted); padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); white-space: nowrap; }
+  .la-table th.la-n, .la-table td.la-n { text-align: right; }
+  .la-table th button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  .la-table td { padding: var(--cds-pad-xs) var(--cds-pad-sm); border-bottom: 1px solid var(--color-border-line); }
+  .la-table tbody tr.la-click { cursor: pointer; }
+  .la-table tbody tr.la-click:hover, .la-table tbody tr[aria-selected="true"] { background: var(--color-bg); }
+  .la-tools { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; justify-content: space-between; }
+  .la-count { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .la-person-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--cds-gap-sm); }
+  .la-person-head h3 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); }
+  .la-close { font: inherit; font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); cursor: pointer; }
+  .la-stats { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md) var(--cds-gap-lg); margin: 0; }
+  .la-stats div { display: flex; flex-direction: column; }
+  .la-stats dt { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+  .la-stats dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: var(--cds-font-weight-medium); }
+  [data-dash-source-state=empty] { color: transparent; }
+  [data-dash-source-state=refreshing] { opacity: .5; transition: opacity var(--cds-dur-slow); }
+</style>
+
+<div class="la">
+  <p class="la-sample"><b>Sample data.</b> Every name and number here is made up to show the layout. Real attendance from #attendance and #drill-attendance replaces it once it has been gathered.</p>
+
+  <header class="la-head">
+    <h1>6th Louisiana attendance</h1>
+    <p class="la-lede"><span data-draw="period">—</span>: an average of <b data-draw="lede" data-k="event" data-f="avg" data-source="summary" data-field="avg">—</b> men per event and <b data-draw="lede" data-k="drill" data-f="avg" data-source="summary" data-field="avg">—</b> per drill, from <b data-draw="lede" data-k="all" data-f="people" data-source="summary" data-field="people">—</b> different people.</p>
+  </header>
+
+  <div class="la-bar">
+    <div class="la-tabs" role="tablist" aria-label="Views">
+      <button id="tab-regiment" role="tab" data-tab="regiment" aria-selected="true">Regiment</button>
+      <button id="tab-companies" role="tab" data-tab="companies" aria-selected="false">Companies</button>
+      <button id="tab-people" role="tab" data-tab="people" aria-selected="false">People</button>
+      <button id="tab-checks" role="tab" data-tab="checks" aria-selected="false">Name checks</button>
+    </div>
+    <div class="la-filters">
+      <select id="year" data-draw="year" data-source="summary" aria-label="Year"></select>
+      <select id="day" class="la-day" aria-label="Day of the week">
+        <option value="all">Any day</option>
+        <option value="Sunday">Sundays</option>
+        <option value="Monday">Mondays</option>
+        <option value="Tuesday">Tuesdays</option>
+        <option value="Wednesday">Wednesdays</option>
+        <option value="Thursday">Thursdays</option>
+        <option value="Friday">Fridays</option>
+        <option value="Saturday">Saturdays</option>
+      </select>
+      <div class="la-seg la-kinds" role="group" aria-label="Type">
+        <button data-kind="all" aria-pressed="true">Events and drills</button>
+        <button data-kind="event" aria-pressed="false">Events</button>
+        <button data-kind="drill" aria-pressed="false">Drills</button>
+      </div>
+    </div>
+  </div>
+
+  <section id="regiment" class="la-page" role="tabpanel" aria-labelledby="tab-regiment">
+    <div class="la-tiles">
+      <div class="la-tile"><span>Events held</span><b class="la-num" data-draw="tile" data-k="event" data-f="posts" data-source="summary" data-field="posts">—</b><div class="la-delta" data-draw="delta" data-k="event" data-f="posts_change" data-source="summary" data-field="posts_change">—</div></div>
+      <div class="la-tile"><span>Drills held</span><b class="la-num" data-draw="tile" data-k="drill" data-f="posts" data-source="summary" data-field="posts">—</b><div class="la-delta" data-draw="delta" data-k="drill" data-f="posts_change" data-source="summary" data-field="posts_change">—</div></div>
+      <div class="la-tile"><span>Average at an event</span><b class="la-num" data-draw="tile" data-k="event" data-f="avg" data-source="summary" data-field="avg">—</b><div class="la-delta" data-draw="delta" data-k="event" data-f="avg_change" data-source="summary" data-field="avg_change">—</div></div>
+      <div class="la-tile"><span>Average at a drill</span><b class="la-num" data-draw="tile" data-k="drill" data-f="avg" data-source="summary" data-field="avg">—</b><div class="la-delta" data-draw="delta" data-k="drill" data-f="avg_change" data-source="summary" data-field="avg_change">—</div></div>
+      <div class="la-tile"><span>Different people</span><b class="la-num" data-draw="tile" data-k="all" data-f="people" data-source="summary" data-field="people">—</b><div class="la-delta" data-draw="delta" data-k="all" data-f="people_change" data-source="summary" data-field="people_change">—</div></div>
+      <div class="la-tile"><span>First-timers</span><b class="la-num" data-draw="tile" data-k="all" data-f="new_people" data-source="summary" data-field="new_people">—</b><div class="la-delta" data-draw="delta" data-k="all" data-f="new_people_change" data-source="summary" data-field="new_people_change">—</div></div>
+    </div>
+
+    <div class="la-card" id="turnout">
+      <h2>Turnout per post, by month</h2>
+      <p>Average number of names on each #attendance or #drill-attendance post that month. Change from the year before is under each figure above when one year is picked.</p>
+      <div class="la-legend"><span class="la-lg-event"><i class="la-sw-event"></i>Events</span><span class="la-lg-drill"><i class="la-sw-drill"></i>Drills</span></div>
+      <div class="la-chart" data-draw="turnout" data-source="monthly"></div>
+    </div>
+
+    <div class="la-grid">
+      <div class="la-card" id="by-day">
+        <h2>Turnout by day of the week</h2>
+        <p>Average names per post on each day, for the year picked. Click a day to filter every chart to it.</p>
+        <div class="la-legend"><span class="la-lg-event"><i class="la-sw-event"></i>Events</span><span class="la-lg-drill"><i class="la-sw-drill"></i>Drills</span></div>
+        <div class="la-chart la-short" data-draw="by-day" data-source="summary"></div>
+      </div>
+      <div class="la-card" id="day-trends">
+        <h2>Each day's turnout per post, by month</h2>
+        <p>One chart per day that had posts, on the same scale, so a slipping day stands out.</p>
+        <div class="la-minis" data-draw="day-minis" data-source="monthly"></div>
+      </div>
+    </div>
+
+    <div class="la-grid">
+      <div class="la-card" id="held">
+        <h2>Events and drills held, by month</h2>
+        <p>One post is one event or drill.</p>
+        <div class="la-legend"><span class="la-lg-event"><i class="la-sw-event"></i>Events</span><span class="la-lg-drill"><i class="la-sw-drill"></i>Drills</span></div>
+        <div class="la-chart la-short" data-draw="held" data-source="monthly"></div>
+      </div>
+      <div class="la-card" id="mix">
+        <h2>Who fills the line, by month</h2>
+        <p>Names counted per month, stacked by the company header they were listed under.</p>
+        <div class="la-chart la-short" data-draw="mix" data-source="company_monthly"></div>
+        <div class="la-legend" data-draw="mix-legend" data-source="company_monthly"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="companies" class="la-page" role="tabpanel" aria-labelledby="tab-companies" hidden>
+    <div class="la-card" id="company-table">
+      <h2>Companies</h2>
+      <p>Turnout is every appearance of a company's men on a post. Share is that company's part of all turnout. Companies come from the header each name was listed under, so a recruit counts under Recruits until he appears under a company.</p>
+      <div class="la-tablebox">
+        <table class="la-table" data-source="companies" data-row-key="kind,day,year,company">
+          <thead><tr>
+            <th data-field="company">Company</th>
+            <th class="la-n" data-field="turnout">Turnout</th>
+            <th class="la-n" data-field="avg">Per post</th>
+            <th class="la-n" data-field="share">Share</th>
+            <th class="la-n" data-field="people">Different people</th>
+          </tr></thead>
+          <tbody data-draw="company-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="la-card" id="company-trends">
+      <h2>Each company's turnout per post, by month</h2>
+      <p>Same scale on every chart, so heights compare across companies.</p>
+      <div class="la-minis" data-draw="minis" data-source="company_monthly"></div>
+    </div>
+  </section>
+
+  <section id="people" class="la-page" role="tabpanel" aria-labelledby="tab-people" hidden>
+    <div class="la-card" id="person" hidden>
+      <div class="la-person-head">
+        <h3 data-draw="p-name" data-source="people" data-field="name">—</h3>
+        <button class="la-close" type="button">Close</button>
+      </div>
+      <dl class="la-stats">
+        <div><dt>Company</dt><dd data-draw="p-stat" data-f="company" data-source="people" data-field="company">—</dd></div>
+        <div><dt>Events</dt><dd data-draw="p-stat" data-f="events" data-source="people" data-field="events">—</dd></div>
+        <div><dt>Drills</dt><dd data-draw="p-stat" data-f="drills" data-source="people" data-field="drills">—</dd></div>
+        <div><dt>Event rate</dt><dd data-draw="p-stat" data-f="event_rate" data-source="people" data-field="event_rate">—</dd></div>
+        <div><dt>Drill rate</dt><dd data-draw="p-stat" data-f="drill_rate" data-source="people" data-field="drill_rate">—</dd></div>
+        <div><dt>First seen</dt><dd data-draw="p-stat" data-f="first_seen" data-source="people" data-field="first_seen">—</dd></div>
+        <div><dt>Last seen</dt><dd data-draw="p-stat" data-f="last_seen" data-source="people" data-field="last_seen">—</dd></div>
+      </dl>
+      <p>All years and days, whatever is picked above.</p>
+      <div class="la-legend"><span class="la-lg-event"><i class="la-sw-event"></i>Events</span><span class="la-lg-drill"><i class="la-sw-drill"></i>Drills</span></div>
+      <div class="la-chart la-short" data-draw="p-chart" data-source="person_monthly"></div>
+    </div>
+
+    <div class="la-card" id="people-table">
+      <h2>Everyone who has attended</h2>
+      <p>Rate is the share of events or drills held between a person's first and last appearance that they were on. Click a name to see their history.</p>
+      <div class="la-tools">
+        <input class="la-search" id="people-search" type="search" placeholder="Search names" aria-label="Search names">
+        <span class="la-count" data-draw="people-count" data-source="people">—</span>
+      </div>
+      <div class="la-tablebox">
+        <table class="la-table la-people" data-source="people" data-row-key="year,day,name">
+          <thead><tr>
+            <th data-field="name" aria-sort="none"><button type="button" data-sort="name">Name</button></th>
+            <th data-field="company" aria-sort="none"><button type="button" data-sort="company">Company</button></th>
+            <th class="la-n" data-field="events" aria-sort="none"><button type="button" data-sort="events">Events</button></th>
+            <th class="la-n" data-field="drills" aria-sort="none"><button type="button" data-sort="drills">Drills</button></th>
+            <th class="la-n" data-field="event_rate" aria-sort="none"><button type="button" data-sort="event_rate">Event rate</button></th>
+            <th class="la-n" data-field="drill_rate" aria-sort="none"><button type="button" data-sort="drill_rate">Drill rate</button></th>
+            <th class="la-n" data-field="last_seen" aria-sort="none"><button type="button" data-sort="last_seen">Last seen</button></th>
+          </tr></thead>
+          <tbody data-draw="people-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="checks" class="la-page" role="tabpanel" aria-labelledby="tab-checks" hidden>
+    <div class="la-card" id="names-to-review">
+      <h2>Names to review</h2>
+      <p>Names on attendance posts that don't match exactly one member. Nothing here is merged or counted toward anyone until you say who it is.</p>
+      <div class="la-tablebox">
+        <table class="la-table" data-source="name_review" data-row-key="name_as_written">
+          <thead><tr>
+            <th data-field="name_as_written">Name as written</th>
+            <th class="la-n" data-field="seen">Times seen</th>
+            <th data-field="first_seen">First seen</th>
+            <th data-field="last_seen">Last seen</th>
+            <th data-field="why">Why it's listed</th>
+          </tr></thead>
+          <tbody data-draw="review-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="la-card" id="multi-company">
+      <h2>Listed under more than one company</h2>
+      <p>Usually a recruit who joined a company, or a transfer. Worth a look in case two different people share a name.</p>
+      <div class="la-tablebox">
+        <table class="la-table" data-source="multi_company" data-row-key="name">
+          <thead><tr>
+            <th data-field="name">Name</th>
+            <th data-field="companies">Companies, in order</th>
+            <th class="la-n" data-field="turnout">Appearances</th>
+            <th data-field="first_seen">First seen</th>
+            <th data-field="last_seen">Last seen</th>
+          </tr></thead>
+          <tbody data-draw="multi-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+dash.calc('summary', {
+  inputs: ['attendance'],
+  title: 'Totals by year, type and day',
+  description: 'Posts held, names counted, average per post, different people and first-timers for each year, type and day of the week, with the change from the year before.',
+  fn: (attendance) => {
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const rs0 = attendance.map((r) => ({ ...r, year: r.date.slice(0, 4), day: DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()] }));
+    const first = new Map();
+    for (const r of rs0) { const f = first.get(r.name); if (!f || r.date < f) first.set(r.name, r.date); }
+    const years = [...new Set(rs0.map((r) => r.year))].sort();
+    const out = [];
+    for (const kind of ['all', 'event', 'drill']) for (const day of ['all', ...DAYS]) {
+      let prev = null;
+      for (const year of ['all', ...years]) {
+        const rs = rs0.filter((r) => (kind === 'all' || r.kind === kind) && (day === 'all' || r.day === day) && (year === 'all' || r.year === year));
+        const posts = new Set(rs.map((r) => r.post)).size;
+        const names = new Set(rs.map((r) => r.name));
+        const fresh = [...names].filter((n) => year === 'all' || first.get(n).slice(0, 4) === year).length;
+        const row = { kind, day, year, posts, turnout: rs.length, avg: posts ? Math.round(rs.length / posts * 10) / 10 : null, people: names.size, new_people: fresh };
+        const p = year === 'all' ? null : prev;
+        row.prev_year = p && p.posts && posts ? p.year : null;
+        row.posts_change = row.prev_year ? posts - p.posts : null;
+        row.avg_change = row.prev_year ? Math.round((row.avg - p.avg) * 10) / 10 : null;
+        row.people_change = row.prev_year ? names.size - p.people : null;
+        row.new_people_change = row.prev_year ? fresh - p.new_people : null;
+        out.push(row);
+        if (year !== 'all') prev = row;
+      }
+    }
+    return out;
+  },
+});
+
+dash.calc('monthly', {
+  inputs: ['attendance'],
+  title: 'Turnout by month',
+  description: 'For each month, type and day of the week: posts held, names counted and average names per post.',
+  fn: (attendance) => {
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const m = new Map();
+    for (const r of attendance) {
+      const d = DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()];
+      for (const kind of ['all', r.kind]) for (const day of ['all', d]) {
+        const key = r.date.slice(0, 7) + '|' + kind + '|' + day;
+        if (!m.has(key)) m.set(key, { month: r.date.slice(0, 7), kind, day, posts: new Set(), turnout: 0 });
+        const g = m.get(key); g.posts.add(r.post); g.turnout += 1;
+      }
+    }
+    return [...m.values()].map((g) => ({ month: g.month, kind: g.kind, day: g.day, posts: g.posts.size, turnout: g.turnout, avg: Math.round(g.turnout / g.posts.size * 10) / 10 }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+  },
+});
+
+dash.calc('companies', {
+  inputs: ['attendance'],
+  title: 'Turnout by company',
+  description: 'For each type, year, day of the week and company header: names counted, average per post held, share of all names counted, and different people.',
+  fn: (attendance) => {
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const rs0 = attendance.map((r) => ({ ...r, year: r.date.slice(0, 4), day: DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()] }));
+    const years = [...new Set(rs0.map((r) => r.year))];
+    const out = [];
+    for (const kind of ['all', 'event', 'drill']) for (const day of ['all', ...DAYS]) for (const year of ['all', ...years]) {
+      const rs = rs0.filter((r) => (kind === 'all' || r.kind === kind) && (day === 'all' || r.day === day) && (year === 'all' || r.year === year));
+      const posts = new Set(rs.map((r) => r.post)).size;
+      const by = new Map();
+      for (const r of rs) { if (!by.has(r.company)) by.set(r.company, { n: 0, names: new Set() }); const g = by.get(r.company); g.n += 1; g.names.add(r.name); }
+      for (const [company, g] of by) out.push({ kind, day, year, company, turnout: g.n, avg: Math.round(g.n / posts * 10) / 10, share: g.n / rs.length, people: g.names.size });
+    }
+    return out;
+  },
+});
+
+dash.calc('company_monthly', {
+  inputs: ['attendance'],
+  title: 'Company turnout by month',
+  description: 'For each month, type, day of the week and company header: names counted and average per post held that month.',
+  fn: (attendance) => {
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const posts = new Map();
+    const m = new Map();
+    for (const r of attendance) {
+      const d = DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()];
+      for (const kind of ['all', r.kind]) for (const day of ['all', d]) {
+        const pk = r.date.slice(0, 7) + '|' + kind + '|' + day;
+        if (!posts.has(pk)) posts.set(pk, new Set());
+        posts.get(pk).add(r.post);
+        const key = pk + '|' + r.company;
+        if (!m.has(key)) m.set(key, { month: r.date.slice(0, 7), kind, day, company: r.company, turnout: 0, pk });
+        m.get(key).turnout += 1;
+      }
+    }
+    return [...m.values()].map(({ pk, ...g }) => ({ ...g, avg: Math.round(g.turnout / posts.get(pk).size * 10) / 10 }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+  },
+});
+
+dash.calc('people', {
+  inputs: ['attendance'],
+  title: 'Attendance by person',
+  description: 'For each year, day of the week and person: latest company, events and drills attended, rate over the posts held between their first and last appearance, and first and last dates seen.',
+  fn: (attendance) => {
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const rs0 = attendance.map((r) => ({ ...r, year: r.date.slice(0, 4), day: DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()] }));
+    const postInfo = new Map();
+    for (const r of rs0) postInfo.set(r.post, r);
+    const held = (kind, day, from, to) => { let n = 0; for (const p of postInfo.values()) if (p.kind === kind && (day === 'all' || p.day === day) && p.date >= from && p.date <= to) n += 1; return n; };
+    const span = new Map();
+    for (const r of [...rs0].sort((a, b) => a.date.localeCompare(b.date))) {
+      const s = span.get(r.name);
+      if (!s) span.set(r.name, { first: r.date, last: r.date, company: r.company });
+      else { s.last = r.date; if (r.company !== 'Recruits' || s.company === 'Recruits') s.company = r.company; }
+    }
+    const years = [...new Set(rs0.map((r) => r.year))];
+    const out = [];
+    for (const year of ['all', ...years]) for (const day of ['all', ...DAYS]) {
+      const by = new Map();
+      for (const r of rs0) {
+        if ((year !== 'all' && r.year !== year) || (day !== 'all' && r.day !== day)) continue;
+        if (!by.has(r.name)) by.set(r.name, { events: 0, drills: 0, first: r.date, last: r.date });
+        const g = by.get(r.name);
+        if (r.kind === 'event') g.events += 1; else g.drills += 1;
+        if (r.date < g.first) g.first = r.date;
+        if (r.date > g.last) g.last = r.date;
+      }
+      for (const [name, g] of by) {
+        const s = span.get(name);
+        const from = year === 'all' || s.first > year + '-01-01' ? s.first : year + '-01-01';
+        const to = year === 'all' || s.last < year + '-12-31' ? s.last : year + '-12-31';
+        const he = held('event', day, from, to), hd = held('drill', day, from, to);
+        out.push({ year, day, name, company: s.company, events: g.events, drills: g.drills, total: g.events + g.drills,
+          event_rate: he ? g.events / he : null, drill_rate: hd ? g.drills / hd : null, first_seen: g.first, last_seen: g.last });
+      }
+    }
+    return out;
+  },
+});
+
+dash.calc('person_monthly', {
+  inputs: ['attendance'],
+  title: 'Each person by month',
+  description: 'Events and drills each person attended per month.',
+  fn: (attendance) => {
+    const m = new Map();
+    for (const r of attendance) {
+      const key = r.name + '|' + r.date.slice(0, 7);
+      if (!m.has(key)) m.set(key, { name: r.name, month: r.date.slice(0, 7), events: 0, drills: 0 });
+      const g = m.get(key);
+      if (r.kind === 'event') g.events += 1; else g.drills += 1;
+    }
+    return [...m.values()];
+  },
+});
+
+dash.calc('multi_company', {
+  inputs: ['attendance'],
+  title: 'Names under more than one company',
+  description: 'People whose name was listed under two or more company headers, with the headers in the order they appeared.',
+  fn: (attendance) => {
+    const by = new Map();
+    for (const r of [...attendance].sort((a, b) => a.date.localeCompare(b.date))) {
+      if (!by.has(r.name)) by.set(r.name, { order: [], n: 0, first: r.date, last: r.date });
+      const g = by.get(r.name);
+      g.n += 1; g.last = r.date;
+      if (g.order[g.order.length - 1] !== r.company) g.order.push(r.company);
+    }
+    return [...by].filter(([, g]) => new Set(g.order).size > 1)
+      .map(([name, g]) => ({ name, companies: g.order.join(' → '), turnout: g.n, first_seen: g.first, last_seen: g.last }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  },
+});
+</script>
+
+<script>
+const ORDER = ['Field Staff', 'A Co', 'B Co', 'C Co', 'D Co', 'Battery', 'Recruits'];
+const enc = encodeURIComponent;
+const fmt = d3.format(',');
+const pct = d3.format('.0%');
+const one = d3.format('.1f');
+const monthParse = d3.utcParse('%Y-%m');
+const monthName = d3.utcFormat('%b %Y');
+const dayName = (s) => d3.utcFormat('%b %-d, %Y')(new Date(s + 'T00:00:00Z'));
+const kindColor = (k) => (k === 'drill' ? dash.colors[1] : dash.colors[0]);
+const kindName = { event: 'Events', drill: 'Drills' };
+const companyColor = (c) => (c === 'Recruits' ? 'var(--cds-chart-muted)' : dash.colors[(ORDER.indexOf(c) + 2) % dash.colors.length] ?? dash.colors[7]);
+const companyRank = (c) => (ORDER.includes(c) ? ORDER.indexOf(c) : 99);
+const P = () => ({ year: 'all', kind: 'all', day: 'all', ...dash.params() });
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const onDay = (x) => x.day === P().day;
+const rows = (id) => { const d = dash.data(id); return d.status === 'ok' ? d.data : null; };
+const shownKinds = () => (P().kind === 'all' ? ['event', 'drill'] : [P().kind]);
+const inYear = (month) => P().year === 'all' || month.startsWith(P().year);
+
+function setText(el, id, text) {
+  const st = dash.data(id).status;
+  el.classList.toggle('dash-skeleton', st === 'loading');
+  el.textContent = st === 'ok' && text != null ? text : '—';
+}
+
+function chartState(el, id) {
+  el.replaceChildren();
+  const st = dash.data(id).status;
+  el.classList.toggle('dash-skeleton', st === 'loading');
+  if (st === 'error') {
+    const f = document.createElement('div');
+    f.className = 'la-failed';
+    f.textContent = 'Failed to load';
+    el.append(f);
+  }
+  return st === 'ok';
+}
+
+function monthsBetween(a, b) {
+  const out = [];
+  for (let d = monthParse(a); d <= monthParse(b); d = d3.utcMonth.offset(d, 1)) out.push(d3.utcFormat('%Y-%m')(d));
+  return out;
+}
+
+function measure(svg, labels) {
+  const t = svg.append('text');
+  let w = 0;
+  for (const l of labels) { t.text(l); w = Math.max(w, t.node().getComputedTextLength()); }
+  t.remove();
+  return w;
+}
+
+function makeTip(el) {
+  const tip = document.createElement('div');
+  tip.className = 'la-tip';
+  tip.hidden = true;
+  el.append(tip);
+  return (x, y, title, lines) => {
+    if (title == null) { tip.hidden = true; return; }
+    tip.replaceChildren();
+    const h = document.createElement('div'); h.textContent = title; tip.append(h);
+    for (const l of lines) {
+      const d = document.createElement('div');
+      if (l.color) { const i = document.createElement('i'); i.style.background = l.color; d.append(i); }
+      d.append(document.createTextNode(l.text));
+      tip.append(d);
+    }
+    tip.hidden = false;
+    const w = tip.offsetWidth, W = el.clientWidth;
+    tip.style.left = Math.max(0, Math.min(W - w, x + 12)) + 'px';
+    tip.style.top = Math.max(0, y - tip.offsetHeight - 8) + 'px';
+  };
+}
+
+function xLabels(months, x, svg, H, step) {
+  let lastX = -Infinity;
+  months.forEach((m, i) => {
+    const isJan = m.endsWith('-01');
+    if (!(i === 0 || isJan || (step && i % step === 0))) return;
+    const label = months.length > 14 ? (isJan || i === 0 ? m.slice(0, 4) : null) : monthName(monthParse(m)).slice(0, 3);
+    if (!label) return;
+    const px = x(m);
+    if (px - lastX < 40) return;
+    lastX = px;
+    svg.append('text').attr('x', px).attr('y', H - 4).text(label);
+  });
+}
+
+// Line chart over months. series: [{name, color, values: Map(month -> number)}]
+function lineChart(el, months, series, o = {}) {
+  const W = Math.max(240, el.clientWidth), H = o.height ?? 240;
+  const svg = d3.select(el).append('svg').attr('class', 'la-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+  const yMax = o.yMax ?? (d3.max(series.flatMap((s) => [...s.values.values()])) || 1);
+  const y = d3.scaleLinear([0, yMax], [H - 22, 8]).nice(o.yTicks ?? 4);
+  const ticks = y.ticks(o.yTicks ?? 4);
+  const l = measure(svg, ticks.map((t) => fmt(t))) + 8;
+  const x = d3.scalePoint(months, [l + 4, W - 8]);
+  for (const t of ticks) {
+    svg.append('line').attr('class', t === 0 ? 'la-axis' : 'la-gridline').attr('x1', l).attr('x2', W).attr('y1', y(t)).attr('y2', y(t));
+    svg.append('text').attr('x', l - 6).attr('y', y(t) + 4).attr('text-anchor', 'end').text(fmt(t));
+  }
+  xLabels(months, x, svg, H);
+  for (const s of series) {
+    const line = d3.line().defined((m) => s.values.has(m)).x((m) => x(m)).y((m) => y(s.values.get(m)));
+    svg.append('path').attr('fill', 'none').style('stroke', s.color).attr('stroke-width', 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round').attr('d', line(months));
+  }
+  if (o.noTip) return;
+  const rule = svg.append('line').attr('class', 'la-rule').attr('y1', 8).attr('y2', H - 22).attr('visibility', 'hidden');
+  const dots = series.map((sr) => svg.append('circle').attr('r', 3.5).style('fill', sr.color).attr('visibility', 'hidden'));
+  const tip = makeTip(el);
+  svg.append('rect').attr('x', l).attr('y', 0).attr('width', W - l).attr('height', H).attr('fill', 'transparent')
+    .on('pointermove', (ev) => {
+      const [px] = d3.pointer(ev);
+      const scale = el.clientWidth / W;
+      let best = months[0];
+      for (const m of months) if (Math.abs(x(m) - px) < Math.abs(x(best) - px)) best = m;
+      rule.attr('x1', x(best)).attr('x2', x(best)).attr('visibility', 'visible');
+      series.forEach((sr, i) => {
+        const v = sr.values.get(best);
+        dots[i].attr('cx', x(best)).attr('cy', v == null ? 0 : y(v)).attr('visibility', v == null ? 'hidden' : 'visible');
+      });
+      const top = d3.min(series, (sr) => (sr.values.has(best) ? y(sr.values.get(best)) : H));
+      tip(x(best) * scale, top * scale, monthName(monthParse(best)), series.map((sr) => ({
+        color: series.length > 1 ? sr.color : null,
+        text: `${sr.name}: ${sr.values.has(best) ? (o.valueFmt ?? one)(sr.values.get(best)) : 'none'}${o.unit ?? ''}`,
+      })));
+    })
+    .on('pointerleave', () => { rule.attr('visibility', 'hidden'); dots.forEach((d) => d.attr('visibility', 'hidden')); tip(); });
+}
+
+// Bar chart over months, grouped or stacked. series: [{name, color, values: Map(month -> number)}]
+function barChart(el, months, series, o = {}) {
+  const W = Math.max(240, el.clientWidth), H = o.height ?? 180;
+  const svg = d3.select(el).append('svg').attr('class', 'la-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+  const total = (m) => d3.sum(series, (s) => s.values.get(m) ?? 0);
+  const yMax = (o.stack ? d3.max(months, total) : d3.max(series.flatMap((s) => [...s.values.values()]))) || 1;
+  const y = d3.scaleLinear([0, yMax], [H - 22, 8]).nice(4);
+  const ticks = y.ticks(4).filter((t) => o.decimals || Number.isInteger(t));
+  const l = measure(svg, ticks.map((t) => fmt(t))) + 8;
+  const x = d3.scaleBand(months, [l + 2, W - 2]).paddingInner(0.2);
+  const inner = d3.scaleBand(series.map((s) => s.name), [0, x.bandwidth()]).padding(0.05);
+  for (const t of ticks) {
+    svg.append('line').attr('class', t === 0 ? 'la-axis' : 'la-gridline').attr('x1', l).attr('x2', W).attr('y1', y(t)).attr('y2', y(t));
+    svg.append('text').attr('x', l - 6).attr('y', y(t) + 4).attr('text-anchor', 'end').text(fmt(t));
+  }
+  if (o.catLabel) {
+    for (const m of months) svg.append('text').attr('x', x(m) + x.bandwidth() / 2).attr('y', H - 4).attr('text-anchor', 'middle').text(o.catLabel(m, x.bandwidth()));
+  } else xLabels(months, (m) => x(m) + x.bandwidth() / 2, svg, H);
+  const r = Math.min(2, x.bandwidth() / 4);
+  for (const m of months) {
+    let base = 0;
+    for (const s of series) {
+      const v = s.values.get(m) ?? 0;
+      if (!v) continue;
+      const bx = o.stack ? x(m) : x(m) + inner(s.name);
+      const bw = Math.min(32, o.stack ? x.bandwidth() : inner.bandwidth());
+      svg.append('rect').attr('x', bx).attr('width', Math.max(1, bw)).attr('y', y(base + v)).attr('height', Math.max(0, y(base) - y(base + v))).attr('rx', o.stack ? 0 : r).style('fill', s.color);
+      if (o.stack) base += v;
+    }
+  }
+  const tip = makeTip(el);
+  const hl = svg.append('rect').attr('fill', 'var(--color-fg)').attr('opacity', 0.06).attr('visibility', 'hidden').attr('y', 8).attr('height', H - 30);
+  svg.append('rect').attr('x', l).attr('y', 0).attr('width', W - l).attr('height', H).attr('fill', 'transparent')
+    .on('pointermove', (ev) => {
+      const [px] = d3.pointer(ev);
+      const m = months[Math.max(0, Math.min(months.length - 1, Math.floor((px - (l + 2)) / x.step())))];
+      const scale = el.clientWidth / W;
+      hl.attr('x', x(m) - x.step() * 0.1).attr('width', x.step()).attr('visibility', 'visible');
+      const lines = series.filter((s) => s.values.get(m)).map((s) => ({ color: series.length > 1 ? s.color : null, text: `${s.name}: ${(o.valueFmt ?? fmt)(s.values.get(m))}${o.unit ?? ''}` }));
+      if (o.stack && series.length > 1) lines.push({ text: `Total: ${fmt(total(m))}` });
+      if (o.extra) lines.push(...o.extra(m));
+      tip((x(m) + x.bandwidth() / 2) * scale, y(o.stack ? total(m) : d3.max(series, (s) => s.values.get(m) ?? 0)) * scale, o.tipTitle ? o.tipTitle(m) : monthName(monthParse(m)), lines.length ? lines : [{ text: 'None' }]);
+    })
+    .on('click', (ev) => {
+      if (!o.onPick) return;
+      const [px] = d3.pointer(ev);
+      o.onPick(months[Math.max(0, Math.min(months.length - 1, Math.floor((px - (l + 2)) / x.step())))]);
+    })
+    .on('pointerleave', () => { hl.attr('visibility', 'hidden'); tip(); });
+}
+
+function monthRange(list) {
+  const ms = list.map((r) => r.month).filter(inYear);
+  if (!ms.length) return [];
+  return monthsBetween(d3.min(ms), d3.max(ms));
+}
+
+// ---------- page controls (listen and set state only) ----------
+const tabs = ['regiment', 'companies', 'people', 'checks'];
+let tab = tabs.includes(location.hash.slice(1)) ? location.hash.slice(1) : (location.hash.slice(1) === 'person' ? 'people' : 'regiment');
+function showTab(name, link = true) {
+  tab = name;
+  for (const b of document.querySelectorAll('.la-tabs [data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === name));
+  for (const s of document.querySelectorAll('.la-page')) s.hidden = s.id !== name;
+  for (const k of document.querySelectorAll('.la-kinds')) k.hidden = name === 'people' || name === 'checks';
+  if (link) dash.setLink(name);
+}
+for (const b of document.querySelectorAll('.la-tabs [data-tab]')) b.addEventListener('click', () => showTab(b.dataset.tab));
+for (const b of document.querySelectorAll('.la-kinds [data-kind]')) b.addEventListener('click', () => dash.setParams({ kind: b.dataset.kind }));
+for (const s of document.querySelectorAll('.la-day')) s.addEventListener('change', () => dash.setParams({ day: s.value }));
+for (const b of document.querySelectorAll('.la-close')) b.addEventListener('click', () => dash.setParams({ person: null }));
+showTab(tab, false);
+
+let sort = { key: 'events', dir: -1 };
+for (const b of document.querySelectorAll('.la-people th button[data-sort]')) {
+  b.addEventListener('click', () => {
+    const k = b.dataset.sort;
+    sort = sort.key === k ? { key: k, dir: -sort.dir } : { key: k, dir: k === 'name' || k === 'company' ? 1 : -1 };
+    for (const th of document.querySelectorAll('.la-people th')) {
+      const own = th.querySelector('button')?.dataset.sort === sort.key;
+      th.setAttribute('aria-sort', own ? (sort.dir > 0 ? 'ascending' : 'descending') : 'none');
+    }
+    dash.draw('people-rows');
+  });
+}
+for (const i of document.querySelectorAll('.la-search')) i.addEventListener('input', () => { dash.draw('people-rows'); dash.draw('people-count'); });
+for (const t of document.querySelectorAll('.la-people')) {
+  const pick = (ev) => {
+    const tr = ev.target.closest('tr[data-key]');
+    if (!tr) return;
+    if (ev.type === 'keydown' && ev.key !== 'Enter' && ev.key !== ' ') return;
+    if (ev.type === 'keydown') ev.preventDefault();
+    dash.setParams({ person: decodeURIComponent(tr.dataset.key.split(',')[2]) });
+    for (const p of document.querySelectorAll('#person')) p.scrollIntoView({ block: 'nearest' });
+  };
+  t.addEventListener('click', pick);
+  t.addEventListener('keydown', pick);
+}
+
+dash.onData(() => {
+  const p = P();
+  for (const b of document.querySelectorAll('.la-kinds [data-kind]')) b.setAttribute('aria-pressed', String(b.dataset.kind === p.kind));
+  for (const el of document.querySelectorAll('#person')) el.hidden = !p.person;
+  for (const s of document.querySelectorAll('.la-day')) s.value = p.day;
+  for (const k of ['event', 'drill']) {
+    for (const sw of document.querySelectorAll('.la-sw-' + k)) sw.style.background = kindColor(k);
+    for (const lg of document.querySelectorAll('.la-lg-' + k)) lg.hidden = !shownKinds().includes(k) && !lg.closest('#person');
+  }
+});
+
+// ---------- drawings ----------
+dash.draw('period', (el) => { el.textContent = (P().year === 'all' ? 'All years' : 'In ' + P().year) + (P().day === 'all' ? '' : ', ' + P().day + 's only'); });
+
+dash.draw('year', (sel) => {
+  const r = rows('summary');
+  const years = r ? [...new Set(r.map((x) => x.year).filter((y) => y !== 'all'))].sort().reverse() : [];
+  sel.replaceChildren(new Option('All years', 'all'), ...years.map((y) => new Option(y, y)));
+  sel.value = P().year;
+  sel.onchange = () => dash.setParams({ year: sel.value });
+});
+
+const summaryRow = (k) => (rows('summary') ?? []).find((r) => r.kind === k && r.year === P().year && onDay(r));
+const fieldFmt = { posts: fmt, avg: one, people: fmt, new_people: fmt };
+
+for (const name of ['tile', 'lede']) {
+  dash.draw(name, (el) => {
+    const k = el.dataset.k, f = el.dataset.f;
+    el.setAttribute('data-where', `kind=${k}&day=${enc(P().day)}&year=${enc(P().year)}`);
+    const r = summaryRow(k);
+    setText(el, 'summary', r && r[f] != null ? fieldFmt[f](r[f]) : null);
+  });
+}
+
+dash.draw('delta', (el) => {
+  const k = el.dataset.k, f = el.dataset.f;
+  el.setAttribute('data-where', `kind=${k}&day=${enc(P().day)}&year=${enc(P().year)}`);
+  const r = summaryRow(k);
+  el.classList.toggle('dash-skeleton', dash.data('summary').status === 'loading');
+  el.style.color = '';
+  if (!r || r[f] == null) { el.textContent = '—'; return; }
+  const v = r[f];
+  el.textContent = `${v > 0 ? '+' : v < 0 ? '−' : '±'}${f === 'avg_change' ? one(Math.abs(v)) : fmt(Math.abs(v))} vs ${r.prev_year}`;
+  el.style.color = v > 0 ? 'var(--color-ok)' : v < 0 ? 'var(--color-bad)' : '';
+});
+
+dash.draw('turnout', (el) => {
+  if (!chartState(el, 'monthly')) return;
+  const r = rows('monthly').filter(onDay);
+  const months = monthRange(r);
+  if (!months.length) return;
+  const series = shownKinds().map((k) => ({ name: kindName[k], color: kindColor(k), values: new Map(r.filter((x) => x.kind === k && onDay(x) && inYear(x.month)).map((x) => [x.month, x.avg])) }));
+  lineChart(el, months, series, { height: 240, unit: ' per post' });
+});
+
+dash.draw('held', (el) => {
+  if (!chartState(el, 'monthly')) return;
+  const r = rows('monthly').filter(onDay);
+  const months = monthRange(r);
+  if (!months.length) return;
+  const series = shownKinds().map((k) => ({ name: kindName[k], color: kindColor(k), values: new Map(r.filter((x) => x.kind === k && onDay(x) && inYear(x.month)).map((x) => [x.month, x.posts])) }));
+  barChart(el, months, series, { height: 180 });
+});
+
+const companiesIn = (r) => [...new Set(r.map((x) => x.company))].sort((a, b) => companyRank(a) - companyRank(b) || a.localeCompare(b));
+
+dash.draw('mix', (el) => {
+  if (!chartState(el, 'company_monthly')) return;
+  const r = rows('company_monthly').filter((x) => x.kind === P().kind && onDay(x) && inYear(x.month));
+  const months = monthRange(r);
+  if (!months.length) return;
+  const series = companiesIn(r).map((c) => ({ name: c, color: companyColor(c), values: new Map(r.filter((x) => x.company === c).map((x) => [x.month, x.turnout])) }));
+  barChart(el, months, series, { height: 180, stack: true });
+});
+
+dash.draw('mix-legend', (el) => {
+  el.replaceChildren();
+  const r = rows('company_monthly');
+  if (!r) return;
+  for (const c of companiesIn(r)) {
+    const s = document.createElement('span');
+    const i = document.createElement('i');
+    i.style.background = companyColor(c);
+    s.append(i, document.createTextNode(c));
+    el.append(s);
+  }
+});
+
+function cell(tr, text, num) {
+  const td = document.createElement('td');
+  td.textContent = text;
+  if (num) td.className = 'la-n';
+  tr.append(td);
+}
+
+dash.draw('company-rows', (tb) => {
+  tb.replaceChildren();
+  const r = rows('companies');
+  if (!r) return;
+  const p = P();
+  for (const x of r.filter((x) => x.kind === p.kind && x.year === p.year && x.day === p.day).sort((a, b) => companyRank(a.company) - companyRank(b.company))) {
+    const tr = document.createElement('tr');
+    tr.dataset.key = [x.kind, x.day, x.year, x.company].map(enc).join(',');
+    cell(tr, x.company); cell(tr, fmt(x.turnout), 1); cell(tr, one(x.avg), 1); cell(tr, pct(x.share), 1); cell(tr, fmt(x.people), 1);
+    tb.append(tr);
+  }
+});
+
+dash.draw('minis', (el) => {
+  if (!chartState(el, 'company_monthly')) return;
+  const r = rows('company_monthly').filter((x) => x.kind === P().kind && onDay(x) && inYear(x.month));
+  const months = monthRange(r);
+  if (!months.length) return;
+  const yMax = d3.max(r, (x) => x.avg) || 1;
+  for (const c of companiesIn(r)) {
+    const box = document.createElement('div');
+    box.className = 'la-mini';
+    const h = document.createElement('h4');
+    h.textContent = c;
+    const ch = document.createElement('div');
+    ch.className = 'la-chart';
+    box.append(h, ch);
+    el.append(box);
+    lineChart(ch, months, [{ name: c, color: companyColor(c), values: new Map(r.filter((x) => x.company === c).map((x) => [x.month, x.avg])) }], { height: 110, yMax, yTicks: 2, unit: ' per post' });
+  }
+});
+
+function peopleShown() {
+  const r = rows('people');
+  if (!r) return null;
+  const q = (document.querySelector('.la-search')?.value ?? '').trim().toLowerCase();
+  return r.filter((x) => x.year === P().year && onDay(x) && (!q || x.name.toLowerCase().includes(q)));
+}
+
+dash.draw('people-count', (el) => {
+  const r = peopleShown();
+  setText(el, 'people', r ? `${fmt(r.length)} ${r.length === 1 ? 'person' : 'people'}` : null);
+});
+
+dash.draw('people-rows', (tb) => {
+  tb.replaceChildren();
+  const r = peopleShown();
+  if (!r) return;
+  const k = sort.key;
+  r.sort((a, b) => {
+    const av = a[k], bv = b[k];
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    const c = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
+    return c * sort.dir || a.name.localeCompare(b.name);
+  });
+  const sel = P().person;
+  for (const x of r) {
+    const tr = document.createElement('tr');
+    tr.className = 'la-click';
+    tr.tabIndex = 0;
+    tr.dataset.key = `${enc(x.year)},${enc(x.day)},${enc(x.name)}`;
+    if (x.name === sel) tr.setAttribute('aria-selected', 'true');
+    cell(tr, x.name); cell(tr, x.company);
+    cell(tr, fmt(x.events), 1); cell(tr, fmt(x.drills), 1);
+    cell(tr, x.event_rate == null ? '—' : pct(x.event_rate), 1); cell(tr, x.drill_rate == null ? '—' : pct(x.drill_rate), 1);
+    cell(tr, dayName(x.last_seen), 1);
+    tb.append(tr);
+  }
+});
+
+const personRow = () => (rows('people') ?? []).find((x) => x.year === 'all' && x.day === 'all' && x.name === P().person);
+
+dash.draw('p-name', (el) => {
+  el.setAttribute('data-where', `year=all&day=all&name=${enc(P().person ?? '')}`);
+  setText(el, 'people', personRow()?.name);
+});
+
+dash.draw('p-stat', (el) => {
+  const f = el.dataset.f;
+  el.setAttribute('data-where', `year=all&day=all&name=${enc(P().person ?? '')}`);
+  const x = personRow();
+  const v = x?.[f];
+  const text = v == null ? null : f.endsWith('_rate') ? pct(v) : f.endsWith('_seen') ? dayName(v) : typeof v === 'number' ? fmt(v) : v;
+  setText(el, 'people', text);
+});
+
+dash.draw('p-chart', (el) => {
+  if (!chartState(el, 'person_monthly')) return;
+  const who = P().person;
+  if (!who) return;
+  const r = rows('person_monthly').filter((x) => x.name === who);
+  if (!r.length) return;
+  const ms = r.map((x) => x.month);
+  const months = monthsBetween(d3.min(ms), d3.max(ms));
+  const series = [
+    { name: 'Events', color: kindColor('event'), values: new Map(r.map((x) => [x.month, x.events])) },
+    { name: 'Drills', color: kindColor('drill'), values: new Map(r.map((x) => [x.month, x.drills])) },
+  ];
+  barChart(el, months, series, { height: 180, stack: true });
+});
+
+dash.draw('by-day', (el) => {
+  if (!chartState(el, 'summary')) return;
+  const r = rows('summary').filter((x) => x.year === P().year && x.day !== 'all' && x.posts > 0);
+  const days = DAYS.filter((d) => r.some((x) => x.day === d && shownKinds().includes(x.kind)));
+  if (!days.length) return;
+  const series = shownKinds().map((k) => ({ name: kindName[k], color: kindColor(k), values: new Map(r.filter((x) => x.kind === k).map((x) => [x.day, x.avg])) }));
+  barChart(el, days, series, {
+    height: 180, decimals: true, valueFmt: one, unit: ' per post',
+    catLabel: (d, bw) => (bw < 34 ? d.slice(0, 2) : d.slice(0, 3)),
+    tipTitle: (d) => d + 's',
+    extra: (d) => shownKinds().map((k) => r.find((x) => x.kind === k && x.day === d)).filter(Boolean).map((x) => ({ text: `${kindName[x.kind]} held: ${fmt(x.posts)}` })),
+    onPick: (d) => dash.setParams({ day: P().day === d ? 'all' : d }),
+  });
+});
+
+dash.draw('day-minis', (el) => {
+  if (!chartState(el, 'monthly')) return;
+  const r = rows('monthly').filter((x) => x.kind === P().kind && x.day !== 'all' && inYear(x.month));
+  const months = monthRange(r);
+  if (!months.length) return;
+  const yMax = d3.max(r, (x) => x.avg) || 1;
+  for (const d of DAYS.filter((d) => r.some((x) => x.day === d))) {
+    const box = document.createElement('div');
+    box.className = 'la-mini';
+    const h = document.createElement('h4');
+    h.textContent = d + 's';
+    const ch = document.createElement('div');
+    ch.className = 'la-chart';
+    box.append(h, ch);
+    el.append(box);
+    lineChart(ch, months, [{ name: d, color: P().day === 'all' || d === P().day ? dash.colors[0] : 'var(--cds-chart-muted)', values: new Map(r.filter((x) => x.day === d).map((x) => [x.month, x.avg])) }], { height: 110, yMax, yTicks: 2, unit: ' per post' });
+  }
+});
+
+dash.draw('review-rows', (tb) => {
+  tb.replaceChildren();
+  const r = rows('name_review');
+  if (!r) return;
+  for (const x of [...r].sort((a, b) => b.seen - a.seen)) {
+    const tr = document.createElement('tr');
+    tr.dataset.key = enc(x.name_as_written);
+    cell(tr, x.name_as_written); cell(tr, fmt(x.seen), 1); cell(tr, dayName(x.first_seen)); cell(tr, dayName(x.last_seen)); cell(tr, x.why);
+    tb.append(tr);
+  }
+});
+
+dash.draw('multi-rows', (tb) => {
+  tb.replaceChildren();
+  const r = rows('multi_company');
+  if (!r) return;
+  for (const x of r) {
+    const tr = document.createElement('tr');
+    tr.dataset.key = enc(x.name);
+    cell(tr, x.name); cell(tr, x.companies); cell(tr, fmt(x.turnout), 1); cell(tr, dayName(x.first_seen)); cell(tr, dayName(x.last_seen));
+    tb.append(tr);
+  }
+});
+</script>
+
+<footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
+</main>
+</body>
+</html>

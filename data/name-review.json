@@ -1,0 +1,44 @@
+[
+ {
+  "name_as_written": "(B)Pvt.Ironhawk",
+  "seen": 3,
+  "first_seen": "2024-05-11",
+  "last_seen": "2024-06-01",
+  "why": "Not in any company member list"
+ },
+ {
+  "name_as_written": "(D)Cpl. Biscuit",
+  "seen": 7,
+  "first_seen": "2025-01-08",
+  "last_seen": "2025-03-15",
+  "why": "Close to two members' names"
+ },
+ {
+  "name_as_written": "Moss",
+  "seen": 12,
+  "first_seen": "2024-09-04",
+  "last_seen": "2025-02-22",
+  "why": "No company letter or rank"
+ },
+ {
+  "name_as_written": "(C)Sgt.Rook_TV",
+  "seen": 2,
+  "first_seen": "2026-02-11",
+  "last_seen": "2026-02-18",
+  "why": "Not in any company member list"
+ },
+ {
+  "name_as_written": "(A)Pvt.Gravy Man",
+  "seen": 5,
+  "first_seen": "2023-11-04",
+  "last_seen": "2023-12-09",
+  "why": "Spacing differs from a member's name"
+ },
+ {
+  "name_as_written": "(E)Pvt.CoalJoe",
+  "seen": 1,
+  "first_seen": "2026-07-25",
+  "last_seen": "2026-07-25",
+  "why": "Company letter has no header in posts"
+ }
+]

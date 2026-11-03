@@ -12,7 +12,7 @@
     held: 'Events and drills held',
     people: 'Different people',
   };
-  const ACROSS = { month: 'Month', quarter: 'Quarter', year: 'Year', day: 'Day of the week', company: 'Company' };
+  const ACROSS = { post: 'Each event or drill', month: 'Month', quarter: 'Quarter', year: 'Year', day: 'Day of the week', company: 'Company' };
   const SPLITS = { none: 'Nothing', kind: 'Event or drill', company: 'Company', day: 'Day of the week' };
   const TIME = ['month', 'quarter', 'year'];
 
@@ -76,15 +76,20 @@
     syncForm();
   }
   function syncForm() {
+    const perPost = form.x.value === 'post';
+    for (const o of form.measure.options) o.disabled = perPost && o.value !== 'total';
+    if (perPost) form.measure.value = 'total';
+    form.type.disabled = perPost;
     const lineOk = TIME.includes(form.x.value);
     form.type.querySelector('option[value="line"]').disabled = !lineOk;
     if (!lineOk && form.type.value === 'line') form.type.value = 'bars';
-    for (const o of form.split.options) o.disabled = o.value !== 'none' && o.value === form.x.value;
+    for (const o of form.split.options) o.disabled = (o.value !== 'none' && o.value === form.x.value) || (perPost && o.value === 'company');
+    if (perPost && form.split.value === 'company') form.split.value = 'none';
     if (form.split.value === form.x.value) form.split.value = 'none';
   }
 
   function describe(cfg) {
-    let s = `${MEASURES[cfg.measure]} by ${ACROSS[cfg.x].toLowerCase()}`;
+    let s = cfg.x === 'post' ? 'Attendance at each event or drill' : `${MEASURES[cfg.measure]} by ${ACROSS[cfg.x].toLowerCase()}`;
     if (cfg.split !== 'none') s += `, split by ${SPLITS[cfg.split].toLowerCase()}`;
     const only = [];
     if (cfg.company && cfg.company !== 'all') only.push(cfg.company);
@@ -94,6 +99,7 @@
   }
 
   const xKey = {
+    post: (r) => r.post,
     month: (r) => r.date.slice(0, 7),
     quarter: (r) => `${r.date.slice(0, 4)}-Q${Math.floor((+r.date.slice(5, 7) - 1) / 3) + 1}`,
     year: (r) => r.date.slice(0, 4),
@@ -134,6 +140,21 @@
       const denom = cfg.split === 'company' ? xPosts.get(c.x).size : c.posts.size;
       return Math.round(c.n / denom * 10) / 10;
     };
+    if (cfg.x === 'post') {
+      const ss = cfg.split === 'kind' ? ['Events', 'Drills'] : cfg.split === 'day' ? DAYS : ['All'];
+      const used = ss.filter((s) => [...cells.values()].some((c) => c.s === s));
+      const date = new Map(rs.map((r) => [r.post, r]));
+      const points = [...cells.values()].map((c) => {
+        const r = date.get(c.x);
+        const i = used.indexOf(c.s);
+        return {
+          date: r.date, day: r.day, value: c.n, name: cfg.split === 'none' ? '' : c.s,
+          color: cfg.split === 'kind' ? kindColor(c.s === 'Drills' ? 'drill' : 'event') : dash.colors[i % dash.colors.length],
+        };
+      }).sort((a, b) => a.date.localeCompare(b.date));
+      const series = used.map((s, i) => ({ name: s, color: cfg.split === 'kind' ? kindColor(s === 'Drills' ? 'drill' : 'event') : dash.colors[i % dash.colors.length] }));
+      return { xs: points, points, series: cfg.split === 'none' ? [] : series };
+    }
     let xs = [...new Set([...cells.values()].map((c) => c.x))];
     if (cfg.x === 'day') xs = DAYS.filter((d) => xs.includes(d));
     else if (cfg.x === 'company') xs.sort((a, b) => companyRank(a) - companyRank(b) || a.localeCompare(b));
@@ -174,6 +195,7 @@
       decimals: cfg.measure === 'avg',
       stack: cfg.type === 'stacked',
     };
+    if (cfg.x === 'post') { postChart(el, a.points, { height }); return; }
     if (cfg.x === 'quarter') { opts.catLabel = qLabel; opts.tipTitle = (q) => `${q.slice(5)} ${q.slice(0, 4)}`; }
     if (cfg.x === 'year') { opts.catLabel = (y) => y; opts.tipTitle = (y) => y; }
     if (cfg.x === 'day') { opts.catLabel = (d, bw) => (bw < 34 ? d.slice(0, 2) : d.slice(0, 3)); opts.tipTitle = (d) => d + 's'; }

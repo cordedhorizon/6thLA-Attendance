@@ -58,6 +58,7 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
         </label>
         <label for="bd-x">Across
           <select id="bd-x">
+            <option value="post">Each event or drill</option>
             <option value="month">Month</option>
             <option value="quarter">Quarter</option>
             <option value="year">Year</option>

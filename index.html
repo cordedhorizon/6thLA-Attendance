@@ -38,6 +38,7 @@
   .la-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--cds-gap-md); }
   .la-card { min-width: 0; display: flex; flex-direction: column; gap: var(--cds-gap-sm); padding: var(--cds-pad-lg); background: var(--color-panel); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); }
   .la-card h2, .la-card h3 { margin: 0; font-size: var(--cds-font-size-heading); font-weight: var(--cds-font-weight-medium); }
+  .la-card-head { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm); align-items: center; justify-content: space-between; }
   .la-card > p { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); max-width: 75ch; }
   .la-legend { display: flex; flex-wrap: wrap; gap: var(--cds-gap-md); font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
   .la-legend span { display: inline-flex; align-items: center; gap: 6px; }
@@ -134,10 +135,17 @@
     </div>
 
     <div class="la-card" id="turnout">
-      <h2>Average attendance, by month</h2>
-      <p>How many people attended a typical event or drill each month. When one year is picked, the change from the year before shows under each figure above.</p>
+      <div class="la-card-head">
+        <h2>Attendance over time</h2>
+        <div class="la-seg la-grain" role="group" aria-label="Show attendance as">
+          <button type="button" data-grain="month" aria-pressed="true">Monthly average</button>
+          <button type="button" data-grain="post" aria-pressed="false">Every event</button>
+        </div>
+      </div>
+      <p class="la-grain-month">How many people attended a typical event or drill each month. When one year is picked, the change from the year before shows under each figure above.</p>
+      <p class="la-grain-post" hidden>How many people attended each event and drill. Point at a dot to see its date and count.</p>
       <div class="la-legend"><span class="la-lg-event"><i class="la-sw-event"></i>Events</span><span class="la-lg-drill"><i class="la-sw-drill"></i>Drills</span></div>
-      <div class="la-chart" data-draw="turnout" data-source="monthly"></div>
+      <div class="la-chart" data-draw="turnout" data-source="monthly posts"></div>
     </div>
 
     <div class="la-grid">
@@ -291,6 +299,7 @@
         </label>
         <label for="bd-x">Across
           <select id="bd-x">
+            <option value="post">Each event or drill</option>
             <option value="month">Month</option>
             <option value="quarter">Quarter</option>
             <option value="year">Year</option>
@@ -474,6 +483,21 @@ dash.calc('people', {
       }
     }
     return out;
+  },
+});
+
+dash.calc('posts', {
+  inputs: ['attendance'],
+  title: 'Attendance at each event and drill',
+  description: 'One row per event or drill: date, type, day of the week and how many attended.',
+  fn: (attendance) => {
+    const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const m = new Map();
+    for (const r of attendance) {
+      if (!m.has(r.post)) m.set(r.post, { post: r.post, date: r.date, kind: r.kind, day: DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()], attendance: 0 });
+      m.get(r.post).attendance += 1;
+    }
+    return [...m.values()].sort((a, b) => a.date.localeCompare(b.date));
   },
 });
 
@@ -705,6 +729,47 @@ function barChart(el, months, series, o = {}) {
     .on('pointerleave', () => { hl.attr('visibility', 'hidden'); tip(); });
 }
 
+// One dot per event or drill over time. points: [{date, value, color, name}]
+function postChart(el, points, o = {}) {
+  const W = Math.max(240, el.clientWidth), H = o.height ?? 240;
+  const svg = d3.select(el).append('svg').attr('class', 'la-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
+  const y = d3.scaleLinear([0, d3.max(points, (p) => p.value) || 1], [H - 22, 8]).nice(4);
+  const ticks = y.ticks(4).filter((t) => Number.isInteger(t));
+  const l = measure(svg, ticks.map((t) => fmt(t))) + 8;
+  const dates = points.map((p) => new Date(p.date + 'T00:00:00Z'));
+  const [d0, d1] = d3.extent(dates);
+  const x = d3.scaleUtc([d3.utcDay.offset(d0, -3), d3.utcDay.offset(d1, 3)], [l + 6, W - 8]);
+  for (const t of ticks) {
+    svg.append('line').attr('class', t === 0 ? 'la-axis' : 'la-gridline').attr('x1', l).attr('x2', W).attr('y1', y(t)).attr('y2', y(t));
+    svg.append('text').attr('x', l - 6).attr('y', y(t) + 4).attr('text-anchor', 'end').text(fmt(t));
+  }
+  const xt = x.ticks(Math.max(2, Math.floor((W - l) / 90)));
+  const tf = x.tickFormat(xt.length);
+  let lastX = -Infinity;
+  for (const t of xt) {
+    const px = x(t);
+    if (px - lastX < 50) continue;
+    lastX = px;
+    svg.append('text').attr('x', px).attr('y', H - 4).attr('text-anchor', 'middle').text(tf(t));
+  }
+  const r = points.length > 400 ? 2.2 : 3;
+  const pts = points.map((p, i) => ({ ...p, cx: x(dates[i]), cy: y(p.value) }));
+  const g = svg.append('g');
+  for (const p of pts) g.append('circle').attr('cx', p.cx).attr('cy', p.cy).attr('r', r).style('fill', p.color).attr('fill-opacity', 0.8);
+  const ring = svg.append('circle').attr('r', r + 3).attr('fill', 'none').attr('stroke-width', 2).attr('visibility', 'hidden');
+  const tip = makeTip(el);
+  svg.append('rect').attr('x', l).attr('y', 0).attr('width', W - l).attr('height', H).attr('fill', 'transparent')
+    .on('pointermove', (ev) => {
+      const [px, py] = d3.pointer(ev);
+      const best = d3.least(pts, (p) => (p.cx - px) ** 2 + ((p.cy - py) / 3) ** 2);
+      if (!best) return;
+      const scale = el.clientWidth / W;
+      ring.attr('cx', best.cx).attr('cy', best.cy).style('stroke', best.color).attr('visibility', 'visible');
+      tip(best.cx * scale, best.cy * scale, `${best.day ?? ''} ${dayName(best.date)}`.trim(), [{ color: best.name ? best.color : null, text: `${best.name ? best.name + ': ' : ''}${fmt(best.value)} attended` }]);
+    })
+    .on('pointerleave', () => { ring.attr('visibility', 'hidden'); tip(); });
+}
+
 function monthRange(list) {
   const ms = list.map((r) => r.month).filter(inYear);
   if (!ms.length) return [];
@@ -723,6 +788,7 @@ function showTab(name, link = true) {
 }
 for (const b of document.querySelectorAll('.la-tabs [data-tab]')) b.addEventListener('click', () => showTab(b.dataset.tab));
 for (const b of document.querySelectorAll('.la-kinds [data-kind]')) b.addEventListener('click', () => dash.setParams({ kind: b.dataset.kind }));
+for (const b of document.querySelectorAll('.la-grain [data-grain]')) b.addEventListener('click', () => dash.setParams({ grain: b.dataset.grain }));
 for (const s of document.querySelectorAll('.la-day')) s.addEventListener('change', () => dash.setParams({ day: s.value }));
 for (const b of document.querySelectorAll('.la-close')) b.addEventListener('click', () => dash.setParams({ person: null }));
 showTab(tab, false);
@@ -756,6 +822,10 @@ for (const t of document.querySelectorAll('.la-people')) {
 dash.onData(() => {
   const p = P();
   for (const b of document.querySelectorAll('.la-kinds [data-kind]')) b.setAttribute('aria-pressed', String(b.dataset.kind === p.kind));
+  const grain = p.grain === 'post' ? 'post' : 'month';
+  for (const b of document.querySelectorAll('.la-grain [data-grain]')) b.setAttribute('aria-pressed', String(b.dataset.grain === grain));
+  for (const el of document.querySelectorAll('.la-grain-month')) el.hidden = grain !== 'month';
+  for (const el of document.querySelectorAll('.la-grain-post')) el.hidden = grain !== 'post';
   for (const el of document.querySelectorAll('#person')) el.hidden = !p.person;
   for (const s of document.querySelectorAll('.la-day')) s.value = p.day;
   for (const k of ['event', 'drill']) {
@@ -800,6 +870,13 @@ dash.draw('delta', (el) => {
 });
 
 dash.draw('turnout', (el) => {
+  if (P().grain === 'post') {
+    if (!chartState(el, 'posts')) return;
+    const pts = rows('posts').filter((x) => shownKinds().includes(x.kind) && (P().day === 'all' || x.day === P().day) && inYear(x.date.slice(0, 7)))
+      .map((x) => ({ date: x.date, day: x.day, value: x.attendance, color: kindColor(x.kind), name: kindName[x.kind].slice(0, -1) }));
+    if (pts.length) postChart(el, pts, { height: 240 });
+    return;
+  }
   if (!chartState(el, 'monthly')) return;
   const r = rows('monthly').filter(onDay);
   const months = monthRange(r);

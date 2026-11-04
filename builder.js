@@ -189,6 +189,10 @@
       opts.catLabel = (p) => (firstOfYear.has(p) ? info.get(p).date.slice(0, 4) : null);
       opts.tipTitle = (p) => `${info.get(p).day} ${dayName(info.get(p).date)}`;
       opts.connect = true;
+      if (window.laShowPost) {
+        opts.onPick = (p) => window.laShowPost(p);
+        opts.extra = () => [{ text: 'Click to see who was there' }];
+      }
     }
     if (cfg.x === 'quarter') { opts.catLabel = qLabel; opts.tipTitle = (q) => `${q.slice(5)} ${q.slice(0, 4)}`; }
     if (cfg.x === 'year') { opts.catLabel = (y) => y; opts.tipTitle = (y) => y; }

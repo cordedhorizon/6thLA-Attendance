@@ -134,3 +134,31 @@ input.mb-nomatch { border-color: var(--color-bad) !important; }
 .mb-profile-list dd.mb-sub { font-weight: 400; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
 .mb-key { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
 .mb-key .mb-pill { margin-right: 4px; }
+.mb-find { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+.mb-asof { margin: 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mb-h4 { margin: var(--cds-gap-sm) 0 0; font-size: var(--cds-font-size-body); font-weight: 600; }
+/* sortable headers */
+.mb-sort, .la-people th button { display: inline-flex; align-items: center; gap: 4px; font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; white-space: nowrap; }
+.la-n .mb-sort { flex-direction: row-reverse; }
+.mb-sort:focus-visible { outline: 2px solid var(--color-fg-muted); outline-offset: 1px; }
+.mb-sort-icon::before, .la-people th button::after { content: "↕"; font-size: .75rem; opacity: .45; }
+th[aria-sort="ascending"] .mb-sort-icon::before, .la-people th[aria-sort="ascending"] button::after { content: "▲"; opacity: .9; font-size: .6rem; }
+th[aria-sort="descending"] .mb-sort-icon::before, .la-people th[aria-sort="descending"] button::after { content: "▼"; opacity: .9; font-size: .6rem; }
+.mb-sort:hover .mb-sort-icon::before, .la-people th button:hover::after { opacity: .9; }
+/* who was there */
+.mb-dialog { width: min(40rem, calc(100vw - 32px)); max-height: min(80vh, 44rem); padding: var(--cds-pad-lg); border: 1px solid var(--cds-border); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); box-shadow: var(--cds-shadow-popover); }
+.mb-dialog::backdrop { background: rgb(0 0 0 / .35); }
+.mb-dialog-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--cds-gap-sm); }
+.mb-dialog-head h3 { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 1.5rem; }
+.mb-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 10.5rem), 1fr)); gap: var(--cds-gap-md); margin-top: var(--cds-gap-md); }
+.mb-roster h4 { margin: 0 0 4px; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); font-weight: 600; }
+.mb-roster ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--cds-font-size-caption); }
+tr[data-post] { cursor: pointer; }
+/* company pages and compare */
+.mb-company-rows tr { cursor: pointer; }
+.mb-quick { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mb-compare td.mb-better { font-weight: 600; }
+.mb-compare td.mb-up { color: var(--color-ok); }
+.mb-compare td.mb-down { color: var(--color-bad); }
+#cmp-mode { align-self: flex-start; }
+.la-card-head > .mb-csv { margin-left: auto; }

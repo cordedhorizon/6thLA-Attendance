@@ -372,7 +372,7 @@
     const r = results();
     el.classList.toggle('dash-skeleton', !r);
     if (!r || !r.length) return;
-    postChart(el, [...r].reverse().map((x) => ({ date: x.date, day: x.day, value: x.n, color: RES[x.res][1](), name: `${RES[x.res][0]} ${x.us}-${x.them}` })), { height: 200 });
+    postChart(el, [...r].reverse().map((x) => ({ post: x.post, date: x.date, day: x.day, value: x.n, color: RES[x.res][1](), name: `${RES[x.res][0]} ${x.us}-${x.them}` })), { height: 200, onPick: window.laShowPost ? (p) => window.laShowPost(p.post) : null });
   });
   dash.draw('rs-rows', (tb) => {
     tb.replaceChildren();
@@ -381,6 +381,9 @@
     if (!r.length) return emptyRow(tb, 5, 'No scored events in this period.');
     for (const x of r) {
       const tr = document.createElement('tr');
+      tr.className = 'la-click';
+      tr.tabIndex = 0;
+      tr.dataset.post = x.post;
       td(tr, dayName(x.date)); td(tr, x.day); td(tr, `${x.us}-${x.them}`); pill(tr, RES[x.res][0], RES[x.res][2]); td(tr, fmt(x.n), 'la-n');
       tb.append(tr);
     }
@@ -587,13 +590,13 @@
   }
   function addCsvButtons() {
     for (const card of document.querySelectorAll('.la-card')) {
-      if (['builder-form', 'check-form', 'person'].includes(card.id) || card.querySelector('.mb-csv')) continue;
+      if (['builder-form', 'check-form', 'compare-form', 'person'].includes(card.id) || card.querySelector('.mb-csv')) continue;
       if (!card.querySelector('table.la-table, .la-chart, .la-minis')) continue;
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'bd-small mb-csv';
       b.textContent = 'Download CSV';
-      const tools = card.querySelector('.bd-card-tools');
+      const tools = card.querySelector('.bd-card-tools, .mb-person-tools, .la-card-head');
       if (tools) tools.append(b);
       else { card.classList.add('mb-has-csv'); card.prepend(b); }
     }
@@ -614,6 +617,8 @@
     dash.setParams({ person: name });
   }
   window.addEventListener('hashchange', route);
+  // Shared with more.js.
+  window.LA = { all, inPeriod, td, pill, emptyRow, tiles, legend, nameButton, openPerson, matchName, weekStreaks, nextMilestone, kindWord, plural, addDays, daysBetween, dayOf, toDate, iso, load, save };
   document.addEventListener('DOMContentLoaded', () => {
     route();
     const open = document.querySelector('.la-page:not([hidden])');

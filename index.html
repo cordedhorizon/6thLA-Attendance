@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
-<link rel="stylesheet" href="site.css?v=fd1b3aa8">
+<link rel="stylesheet" href="site.css?v=23340999">
 <script src="d3.min.js?v=6d64bd2f"></script>
 <script src="dash-shim.js?v=d2fb0a0d"></script>
 </head>
@@ -92,6 +92,7 @@
     <div class="mb-find">
       <input id="find-member" type="search" list="all-members" placeholder="Find a member" aria-label="Find a member" autocomplete="off">
       <datalist id="all-members"></datalist>
+      <p class="mb-asof" data-draw="mb-asof"></p>
     </div>
   </header>
 
@@ -104,6 +105,7 @@
       <button id="tab-results" role="tab" data-tab="results" aria-selected="false">Results</button>
       <button id="tab-milestones" role="tab" data-tab="milestones" aria-selected="false">Milestones</button>
       <button id="tab-check" role="tab" data-tab="check" aria-selected="false">Attendance check</button>
+      <button id="tab-compare" role="tab" data-tab="compare" aria-selected="false">Compare</button>
       <button id="tab-checks" role="tab" data-tab="checks" aria-selected="false">Name checks</button>
       <button id="tab-builder" role="tab" data-tab="builder" aria-selected="false">Build a chart</button>
     </div>
@@ -172,7 +174,7 @@
         </div>
       </div>
       <p class="la-grain-month">How many people attended a typical event or drill each month. When one year is picked, the change from the year before shows under each figure above.</p>
-      <p class="la-grain-post" hidden>How many people attended each event and drill. Point at a dot to see its date and count.</p>
+      <p class="la-grain-post" hidden>How many people attended each event and drill. Point at a dot to see its date and count, or click it to see who was there.</p>
       <div class="la-legend"><span class="la-lg-event"><i class="la-sw-event"></i>Events</span><span class="la-lg-drill"><i class="la-sw-drill"></i>Drills</span></div>
       <div class="la-chart" data-draw="turnout" data-source="monthly posts"></div>
     </div>
@@ -212,6 +214,27 @@
   </section>
 
   <section id="companies" class="la-page" role="tabpanel" aria-labelledby="tab-companies" hidden>
+    <div class="la-card" id="company-card" hidden>
+      <div class="la-person-head">
+        <h3 data-draw="co-name">—</h3>
+        <div class="mb-person-tools">
+          <button class="bd-small mb-copy-company" type="button">Copy link</button>
+          <button class="bd-small mb-close-company" type="button">Close</button>
+        </div>
+      </div>
+      <div class="la-tiles" data-draw="co-tiles"></div>
+      <h4 class="mb-h4">Average attendance by month</h4>
+      <div class="la-legend" data-draw="co-legend"></div>
+      <div class="la-chart la-short" data-draw="co-chart"></div>
+      <h4 class="mb-h4">Members</h4>
+      <p class="mb-note">Everyone now listed under this company who attended in the period picked above or in the last 90 days. Active means seen in the last 30 days, quiet 31 to 90 days. Counts are for the period picked above.</p>
+      <div class="la-tablebox">
+        <table class="la-table">
+          <thead><tr><th>Name</th><th>Status</th><th class="la-n">Events</th><th class="la-n">Drills</th><th>Last seen</th><th class="la-n">Days since seen</th></tr></thead>
+          <tbody data-draw="co-rows"></tbody>
+        </table>
+      </div>
+    </div>
     <div class="la-card" id="company-table">
       <h2>Companies</h2>
       <p>Average attendance is how many of a company's men are at a typical event or drill. Share is that company's part of the regiment's attendance. Company comes from where each name was listed, so a recruit counts under Recruits until he is listed under a company.</p>
@@ -223,7 +246,7 @@
             <th class="la-n" data-field="share">Share</th>
             <th class="la-n" data-field="people">Different people</th>
           </tr></thead>
-          <tbody data-draw="company-rows"></tbody>
+          <tbody data-draw="company-rows" class="mb-company-rows"></tbody>
         </table>
       </div>
     </div>
@@ -313,14 +336,14 @@
       </div>
       <div class="la-card" id="results-over-time">
         <h2>Results over time</h2>
-        <p>Each event's attendance, colored by the result.</p>
+        <p>Each event's attendance, colored by the result. Click a dot to see who was there.</p>
         <div class="la-legend" data-draw="rs-legend"></div>
         <div class="la-chart la-short" data-draw="rs-dots"></div>
       </div>
     </div>
     <div class="la-card" id="results-list">
       <h2>Every result</h2>
-      <p>Scores come from the first line of each #attendance post, read as ours first.</p>
+      <p>Scores come from the first line of each #attendance post, read as ours first. Click a row to see who was there.</p>
       <div class="la-tablebox">
         <table class="la-table">
           <thead><tr><th>Date</th><th>Day</th><th>Score</th><th>Result</th><th class="la-n">Attendance</th></tr></thead>
@@ -418,6 +441,50 @@
     </div>
   </section>
 
+  <section id="compare" class="la-page" role="tabpanel" aria-labelledby="tab-compare" hidden>
+    <div class="la-card" id="compare-form">
+      <h2>Compare</h2>
+      <p>Put two members, or two stretches of time, side by side.</p>
+      <div class="la-seg" id="cmp-mode" role="group" aria-label="What to compare">
+        <button type="button" data-mode="people" aria-pressed="true">Two members</button>
+        <button type="button" data-mode="periods" aria-pressed="false">Two periods</button>
+      </div>
+      <div class="bd-form" id="cmp-people">
+        <label for="cmp-a">First member
+          <input id="cmp-a" list="all-members" placeholder="Type a name" autocomplete="off">
+        </label>
+        <label for="cmp-b">Second member
+          <input id="cmp-b" list="all-members" placeholder="Type a name" autocomplete="off">
+        </label>
+      </div>
+      <div class="bd-form" id="cmp-periods" hidden>
+        <label for="cmp-p1f">First period from <input id="cmp-p1f" type="date"></label>
+        <label for="cmp-p1t">to <input id="cmp-p1t" type="date"></label>
+        <label for="cmp-p2f">Second period from <input id="cmp-p2f" type="date"></label>
+        <label for="cmp-p2t">to <input id="cmp-p2t" type="date"></label>
+        <div class="bd-wide mb-quick">
+          <span>Quick picks:</span>
+          <button type="button" class="bd-small" data-quick="3m">Last 3 months vs the 3 months before</button>
+          <button type="button" class="bd-small" data-quick="3my">Last 3 months vs a year earlier</button>
+          <button type="button" class="bd-small" data-quick="y">This year so far vs last year</button>
+        </div>
+      </div>
+    </div>
+    <div class="la-card" id="compare-result">
+      <h2 data-draw="cmp-title">—</h2>
+      <p class="mb-summary" data-draw="cmp-note"></p>
+      <div class="la-tablebox">
+        <table class="la-table mb-compare">
+          <thead><tr data-draw="cmp-head"></tr></thead>
+          <tbody data-draw="cmp-rows"></tbody>
+        </table>
+      </div>
+      <h4 class="mb-h4" data-draw="cmp-chart-title"></h4>
+      <div class="la-legend" data-draw="cmp-legend"></div>
+      <div class="la-chart la-short" data-draw="cmp-chart"></div>
+    </div>
+  </section>
+
   <section id="checks" class="la-page" role="tabpanel" aria-labelledby="tab-checks" hidden>
     <div class="la-card" id="names-to-review">
       <h2>Names to review</h2>
@@ -504,6 +571,7 @@
       </div>
       <div class="bd-filters-slot"><span class="bd-slot-label">Period and filters</span></div>
       <p class="bd-preview-desc"></p>
+      <p class="mb-note bd-pick-tip" hidden>Click a point to see who was at that event or drill.</p>
       <div class="la-legend bd-preview-legend"></div>
       <div class="la-chart" data-draw="bd-preview"></div>
       <div class="bd-actions">
@@ -936,10 +1004,18 @@ function lineChart(el, allMonths, series, o = {}) {
       tip(x(best) * scale, top * scale, o.tipTitle ? o.tipTitle(best) : monthName(monthParse(best)), series.filter((sr) => !o.connect || sr.values.has(best)).map((sr) => ({
         color: series.length > 1 ? sr.color : null,
         text: `${sr.name}: ${sr.values.has(best) ? (o.valueFmt ?? one)(sr.values.get(best)) : 'none'}${o.unit ?? ''}`,
-      })));
+      })).concat(o.extra ? o.extra(best) : []));
+    })
+    .on('click', (ev) => {
+      if (!o.onPick || ev.ctrlKey || ev.metaKey) return;
+      const [px] = d3.pointer(ev);
+      let best = months[0];
+      for (const m of months) if (Math.abs(x(m) - px) < Math.abs(x(best) - px)) best = m;
+      o.onPick(best);
     })
     .on('pointerleave', () => { rule.attr('visibility', 'hidden'); dots.forEach((d) => d.attr('visibility', 'hidden')); tip(); });
   lineRect.raise();
+  if (o.onPick) lineRect.style('cursor', 'pointer');
 }
 
 // Bar chart over months, grouped or stacked. series: [{name, color, values: Map(month -> number)}]
@@ -1031,6 +1107,7 @@ function postChart(el, allPoints, o = {}) {
   const tip = makeTip(el);
   const postRect = svg.append('rect').attr('x', l).attr('y', 0).attr('width', W - l).attr('height', H).attr('fill', 'transparent');
   attachZoom(el, svg, postRect, allDays, days, (d) => x(new Date(d + 'T00:00:00Z')), H);
+  if (o.onPick) postRect.style('cursor', 'pointer');
   postRect.raise()
     .on('pointermove', (ev) => {
       const [px, py] = d3.pointer(ev);
@@ -1038,7 +1115,13 @@ function postChart(el, allPoints, o = {}) {
       if (!best) return;
       const scale = el.clientWidth / W;
       ring.attr('cx', best.cx).attr('cy', best.cy).style('stroke', best.color).attr('visibility', 'visible');
-      tip(best.cx * scale, best.cy * scale, `${best.day ?? ''} ${dayName(best.date)}`.trim(), [{ color: best.name ? best.color : null, text: `${best.name ? best.name + ': ' : ''}${fmt(best.value)} attended` }]);
+      tip(best.cx * scale, best.cy * scale, `${best.day ?? ''} ${dayName(best.date)}`.trim(), [{ color: best.name ? best.color : null, text: `${best.name ? best.name + ': ' : ''}${fmt(best.value)} attended` }].concat(o.onPick ? [{ text: 'Click to see who was there' }] : []));
+    })
+    .on('click', (ev) => {
+      if (!o.onPick || ev.ctrlKey || ev.metaKey) return;
+      const [px, py] = d3.pointer(ev);
+      const best = d3.least(pts, (p) => (p.cx - px) ** 2 + ((p.cy - py) / 3) ** 2);
+      if (best) o.onPick(best);
     })
     .on('pointerleave', () => { ring.attr('visibility', 'hidden'); tip(); });
 }
@@ -1050,7 +1133,7 @@ function monthRange(list) {
 }
 
 // ---------- page controls (listen and set state only) ----------
-const tabs = ['regiment', 'companies', 'people', 'recruits', 'results', 'milestones', 'check', 'checks', 'builder'];
+const tabs = ['regiment', 'companies', 'people', 'recruits', 'results', 'milestones', 'check', 'compare', 'checks', 'builder'];
 let tab = tabs.includes(location.hash.slice(1)) ? location.hash.slice(1) : (location.hash.slice(1) === 'person' ? 'people' : 'regiment');
 function showTab(name, link = true) {
   tab = name;
@@ -1146,8 +1229,8 @@ dash.draw('turnout', (el) => {
   if (P().grain === 'post') {
     if (!chartState(el, 'posts')) return;
     const pts = rows('posts').filter((x) => shownKinds().includes(x.kind) && (P().day === 'all' || x.day === P().day) && inYear(x.date.slice(0, 7)))
-      .map((x) => ({ date: x.date, day: x.day, value: x.attendance, color: kindColor(x.kind), name: kindName[x.kind].slice(0, -1) }));
-    if (pts.length) postChart(el, pts, { height: 240 });
+      .map((x) => ({ post: x.post, date: x.date, day: x.day, value: x.attendance, color: kindColor(x.kind), name: kindName[x.kind].slice(0, -1) }));
+    if (pts.length) postChart(el, pts, { height: 240, onPick: window.laShowPost ? (p) => window.laShowPost(p.post) : null });
     return;
   }
   if (!chartState(el, 'monthly')) return;
@@ -1360,8 +1443,9 @@ dash.draw('multi-rows', (tb) => {
 });
 </script>
 
-<script src="builder.js?v=6a6b57ed"></script>
-<script src="members.js?v=4f0faf5f"></script>
+<script src="builder.js?v=8704e933"></script>
+<script src="members.js?v=4dda2df5"></script>
+<script src="more.js?v=f63c7b84"></script>
 <footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
 </main>
 </body>

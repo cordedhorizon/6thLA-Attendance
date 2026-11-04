@@ -13,19 +13,21 @@ def rep(old, new):
     page = page.replace(old, new)
 
 rep("const tabs = ['regiment', 'companies', 'people', 'checks'];",
-    "const tabs = ['regiment', 'companies', 'people', 'recruits', 'results', 'milestones', 'check', 'checks', 'builder'];")
+    "const tabs = ['regiment', 'companies', 'people', 'recruits', 'results', 'milestones', 'check', 'compare', 'checks', 'builder'];")
 rep('''      <button id="tab-people" role="tab" data-tab="people" aria-selected="false">People</button>
 ''', '''      <button id="tab-people" role="tab" data-tab="people" aria-selected="false">People</button>
       <button id="tab-recruits" role="tab" data-tab="recruits" aria-selected="false">Recruits</button>
       <button id="tab-results" role="tab" data-tab="results" aria-selected="false">Results</button>
       <button id="tab-milestones" role="tab" data-tab="milestones" aria-selected="false">Milestones</button>
       <button id="tab-check" role="tab" data-tab="check" aria-selected="false">Attendance check</button>
+      <button id="tab-compare" role="tab" data-tab="compare" aria-selected="false">Compare</button>
 ''')
 # find a member, in the header
 rep('''  </header>
 ''', '''    <div class="mb-find">
       <input id="find-member" type="search" list="all-members" placeholder="Find a member" aria-label="Find a member" autocomplete="off">
       <datalist id="all-members"></datalist>
+      <p class="mb-asof" data-draw="mb-asof"></p>
     </div>
   </header>
 ''')
@@ -106,14 +108,14 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
       </div>
       <div class="la-card" id="results-over-time">
         <h2>Results over time</h2>
-        <p>Each event's attendance, colored by the result.</p>
+        <p>Each event's attendance, colored by the result. Click a dot to see who was there.</p>
         <div class="la-legend" data-draw="rs-legend"></div>
         <div class="la-chart la-short" data-draw="rs-dots"></div>
       </div>
     </div>
     <div class="la-card" id="results-list">
       <h2>Every result</h2>
-      <p>Scores come from the first line of each #attendance post, read as ours first.</p>
+      <p>Scores come from the first line of each #attendance post, read as ours first. Click a row to see who was there.</p>
       <div class="la-tablebox">
         <table class="la-table">
           <thead><tr><th>Date</th><th>Day</th><th>Score</th><th>Result</th><th class="la-n">Attendance</th></tr></thead>
@@ -213,6 +215,81 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
 
   <section id="checks" class="la-page"''')
 
+# clickable dots on the every-event chart, company pages
+rep('Point at a dot to see its date and count.</p>', 'Point at a dot to see its date and count, or click it to see who was there.</p>')
+rep('''    <div class="la-card" id="company-table">
+      <h2>Companies</h2>''', '''    <div class="la-card" id="company-card" hidden>
+      <div class="la-person-head">
+        <h3 data-draw="co-name">—</h3>
+        <div class="mb-person-tools">
+          <button class="bd-small mb-copy-company" type="button">Copy link</button>
+          <button class="bd-small mb-close-company" type="button">Close</button>
+        </div>
+      </div>
+      <div class="la-tiles" data-draw="co-tiles"></div>
+      <h4 class="mb-h4">Average attendance by month</h4>
+      <div class="la-legend" data-draw="co-legend"></div>
+      <div class="la-chart la-short" data-draw="co-chart"></div>
+      <h4 class="mb-h4">Members</h4>
+      <p class="mb-note">Everyone now listed under this company who attended in the period picked above or in the last 90 days. Active means seen in the last 30 days, quiet 31 to 90 days. Counts are for the period picked above.</p>
+      <div class="la-tablebox">
+        <table class="la-table">
+          <thead><tr><th>Name</th><th>Status</th><th class="la-n">Events</th><th class="la-n">Drills</th><th>Last seen</th><th class="la-n">Days since seen</th></tr></thead>
+          <tbody data-draw="co-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="la-card" id="company-table">
+      <h2>Companies</h2>''')
+rep('''          <tbody data-draw="company-rows"></tbody>''', '''          <tbody data-draw="company-rows" class="mb-company-rows"></tbody>''')
+
+# compare tab
+rep('''  <section id="checks" class="la-page"''', '''  <section id="compare" class="la-page" role="tabpanel" aria-labelledby="tab-compare" hidden>
+    <div class="la-card" id="compare-form">
+      <h2>Compare</h2>
+      <p>Put two members, or two stretches of time, side by side.</p>
+      <div class="la-seg" id="cmp-mode" role="group" aria-label="What to compare">
+        <button type="button" data-mode="people" aria-pressed="true">Two members</button>
+        <button type="button" data-mode="periods" aria-pressed="false">Two periods</button>
+      </div>
+      <div class="bd-form" id="cmp-people">
+        <label for="cmp-a">First member
+          <input id="cmp-a" list="all-members" placeholder="Type a name" autocomplete="off">
+        </label>
+        <label for="cmp-b">Second member
+          <input id="cmp-b" list="all-members" placeholder="Type a name" autocomplete="off">
+        </label>
+      </div>
+      <div class="bd-form" id="cmp-periods" hidden>
+        <label for="cmp-p1f">First period from <input id="cmp-p1f" type="date"></label>
+        <label for="cmp-p1t">to <input id="cmp-p1t" type="date"></label>
+        <label for="cmp-p2f">Second period from <input id="cmp-p2f" type="date"></label>
+        <label for="cmp-p2t">to <input id="cmp-p2t" type="date"></label>
+        <div class="bd-wide mb-quick">
+          <span>Quick picks:</span>
+          <button type="button" class="bd-small" data-quick="3m">Last 3 months vs the 3 months before</button>
+          <button type="button" class="bd-small" data-quick="3my">Last 3 months vs a year earlier</button>
+          <button type="button" class="bd-small" data-quick="y">This year so far vs last year</button>
+        </div>
+      </div>
+    </div>
+    <div class="la-card" id="compare-result">
+      <h2 data-draw="cmp-title">—</h2>
+      <p class="mb-summary" data-draw="cmp-note"></p>
+      <div class="la-tablebox">
+        <table class="la-table mb-compare">
+          <thead><tr data-draw="cmp-head"></tr></thead>
+          <tbody data-draw="cmp-rows"></tbody>
+        </table>
+      </div>
+      <h4 class="mb-h4" data-draw="cmp-chart-title"></h4>
+      <div class="la-legend" data-draw="cmp-legend"></div>
+      <div class="la-chart la-short" data-draw="cmp-chart"></div>
+    </div>
+  </section>
+
+  <section id="checks" class="la-page"''')
+
 # custom charts on the Regiment tab, after the built-in ones
 rep('''  </section>
 
@@ -279,6 +356,7 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
       </div>
       <div class="bd-filters-slot"><span class="bd-slot-label">Period and filters</span></div>
       <p class="bd-preview-desc"></p>
+      <p class="mb-note bd-pick-tip" hidden>Click a point to see who was at that event or drill.</p>
       <div class="la-legend bd-preview-legend"></div>
       <div class="la-chart" data-draw="bd-preview"></div>
       <div class="bd-actions">
@@ -315,6 +393,7 @@ head = '''<!doctype html>
 foot = '''
 <script src="builder.js"></script>
 <script src="members.js"></script>
+<script src="more.js"></script>
 <footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
 </main>
 </body>
@@ -325,7 +404,7 @@ foot = '''
 import hashlib, os
 out = head + page + foot
 root = os.path.dirname(os.path.abspath(sys.argv[2]))
-for f in ['site.css', 'd3.min.js', 'dash-shim.js', 'builder.js', 'members.js']:
+for f in ['site.css', 'd3.min.js', 'dash-shim.js', 'builder.js', 'members.js', 'more.js']:
     v = hashlib.sha1(open(os.path.join(root, f), 'rb').read()).hexdigest()[:8]
     for attr in ('href', 'src'):
         out = out.replace(f'{attr}="{f}"', f'{attr}="{f}?v={v}"')

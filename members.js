@@ -227,7 +227,12 @@
   // One rank per line, newest first; past three, the older ones fold away behind "Show all".
   function rankHistory(g) {
     const SHOW = 3;
-    const list = [...g.ranks].reverse().map((x, i, arr) => `${x.rank}: ${i === arr.length - 1 ? 'first seen' : 'from'} ${dayName(x.date)}`);
+    // Records don't reach back to everyone's start, so the earliest rank says what we actually know.
+    const start = all().data[0].date;
+    const earliest = (x) => (/^rct/i.test(x.rank) ? `joined as a recruit, ${dayName(x.date)}`
+      : daysBetween(start, x.date) <= 30 ? `already this rank when records begin (${dayName(start)})`
+      : `first seen at this rank, ${dayName(x.date)}`);
+    const list = [...g.ranks].reverse().map((x, i, arr) => `${x.rank}: ${i === arr.length - 1 ? earliest(x) : 'from ' + dayName(x.date)}`);
     const ul = (items) => { const u = document.createElement('ul'); u.className = 'mb-ranks'; for (const t of items) { const li = document.createElement('li'); li.textContent = t; u.append(li); } return u; };
     const box = document.createDocumentFragment();
     box.append(ul(list.slice(0, SHOW)));

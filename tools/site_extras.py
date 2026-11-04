@@ -320,4 +320,13 @@ foot = '''
 </body>
 </html>
 '''
-open(sys.argv[2], 'w').write(head + page + foot)
+# Stamp each local file with a hash of its contents, so browsers fetch the new copy after every change
+# instead of reusing a cached one (GitHub Pages lets browsers cache files for 10 minutes).
+import hashlib, os
+out = head + page + foot
+root = os.path.dirname(os.path.abspath(sys.argv[2]))
+for f in ['site.css', 'd3.min.js', 'dash-shim.js', 'builder.js', 'members.js']:
+    v = hashlib.sha1(open(os.path.join(root, f), 'rb').read()).hexdigest()[:8]
+    for attr in ('href', 'src'):
+        out = out.replace(f'{attr}="{f}"', f'{attr}="{f}?v={v}"')
+open(sys.argv[2], 'w').write(out)

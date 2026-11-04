@@ -92,7 +92,7 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
       <p>Someone stays a recruit until they choose a company and are listed under it.</p>
       <div class="la-tablebox">
         <table class="la-table">
-          <thead><tr><th>Name</th><th>First seen</th><th>Status</th><th>Joined</th><th class="la-n">Days to join</th><th class="la-n">Attended in first 30 days</th><th>Last seen</th></tr></thead>
+          <thead><tr><th>Rank</th><th>Name</th><th>First seen</th><th>Status</th><th>Joined</th><th class="la-n">Days to join</th><th class="la-n">Attended in first 30 days</th><th>Last seen</th></tr></thead>
           <tbody data-draw="rc-rows"></tbody>
         </table>
       </div>
@@ -133,7 +133,7 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
         <p>Members seen in the last 60 days who are close to their next milestone.</p>
         <div class="la-tablebox">
           <table class="la-table">
-            <thead><tr><th>Name</th><th>Company</th><th>Next milestone</th><th class="la-n">To go</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Name</th><th>Company</th><th>Next milestone</th><th class="la-n">To go</th></tr></thead>
             <tbody data-draw="ms-next"></tbody>
           </table>
         </div>
@@ -143,7 +143,7 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
         <p>In the period picked above, newest first. Milestones are 10, 25, 50, 75, 100 and every 50 after that, for events and drills separately.</p>
         <div class="la-tablebox">
           <table class="la-table">
-            <thead><tr><th>Date</th><th>Name</th><th>Company</th><th>Milestone</th></tr></thead>
+            <thead><tr><th>Date</th><th>Rank</th><th>Name</th><th>Company</th><th>Milestone</th></tr></thead>
             <tbody data-draw="ms-rows"></tbody>
           </table>
         </div>
@@ -204,7 +204,7 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
       <ul class="mb-key" data-draw="ab-key" aria-label="What the statuses mean"></ul>
       <div class="la-tablebox">
         <table class="la-table">
-          <thead><tr><th>Status</th><th>Name</th><th>Company</th><th class="la-n">Attended</th><th>Last event</th><th>Last drill</th><th class="la-n">Days since seen</th></tr></thead>
+          <thead><tr><th>Status</th><th>Rank</th><th>Name</th><th>Company</th><th class="la-n">Attended</th><th>Last event</th><th>Last drill</th><th class="la-n">Days since seen</th></tr></thead>
           <tbody data-draw="ab-rows"></tbody>
         </table>
       </div>
@@ -232,7 +232,7 @@ rep('''    <div class="la-card" id="company-table">
       <p class="mb-note">Everyone now listed under this company who attended in the period picked above or in the last 90 days. Active means seen in the last 30 days, quiet 31 to 90 days. Counts are for the period picked above.</p>
       <div class="la-tablebox">
         <table class="la-table">
-          <thead><tr><th>Name</th><th>Status</th><th class="la-n">Events</th><th class="la-n">Drills</th><th>Last seen</th><th class="la-n">Days since seen</th></tr></thead>
+          <thead><tr><th>Rank</th><th>Name</th><th>Status</th><th class="la-n">Events</th><th class="la-n">Drills</th><th>Last seen</th><th class="la-n">Days since seen</th></tr></thead>
           <tbody data-draw="co-rows"></tbody>
         </table>
       </div>
@@ -245,10 +245,10 @@ rep('''          <tbody data-draw="company-rows"></tbody>''', '''          <tbod
 rep('''  <section id="checks" class="la-page"''', '''  <section id="compare" class="la-page" role="tabpanel" aria-labelledby="tab-compare" hidden>
     <div class="la-card" id="compare-form">
       <h2>Compare</h2>
-      <p>Put two members, or two stretches of time, side by side.</p>
+      <p>Put two members side by side, or the whole regiment or any company over any two stretches of time. For example, B Co against C Co this year, or the regiment now against a year ago.</p>
       <div class="la-seg" id="cmp-mode" role="group" aria-label="What to compare">
         <button type="button" data-mode="people" aria-pressed="true">Two members</button>
-        <button type="button" data-mode="periods" aria-pressed="false">Two periods</button>
+        <button type="button" data-mode="periods" aria-pressed="false">Regiment or companies</button>
       </div>
       <div class="bd-form" id="cmp-people">
         <label for="cmp-a">First member
@@ -259,15 +259,18 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="compare" cla
         </label>
       </div>
       <div class="bd-form" id="cmp-periods" hidden>
-        <label for="cmp-p1f">First period from <input id="cmp-p1f" type="date"></label>
+        <label for="cmp-g1">First: who <select id="cmp-g1" class="mb-groups"></select></label>
+        <label for="cmp-p1f">from <input id="cmp-p1f" type="date"></label>
         <label for="cmp-p1t">to <input id="cmp-p1t" type="date"></label>
-        <label for="cmp-p2f">Second period from <input id="cmp-p2f" type="date"></label>
+        <label for="cmp-g2" class="mb-row-start">Second: who <select id="cmp-g2" class="mb-groups"></select></label>
+        <label for="cmp-p2f">from <input id="cmp-p2f" type="date"></label>
         <label for="cmp-p2t">to <input id="cmp-p2t" type="date"></label>
         <div class="bd-wide mb-quick">
           <span>Quick picks:</span>
           <button type="button" class="bd-small" data-quick="3m">Last 3 months vs the 3 months before</button>
           <button type="button" class="bd-small" data-quick="3my">Last 3 months vs a year earlier</button>
           <button type="button" class="bd-small" data-quick="y">This year so far vs last year</button>
+          <button type="button" class="bd-small" data-quick="same">Same dates for both</button>
         </div>
       </div>
     </div>

@@ -43,6 +43,10 @@
       const he = heldBetween('event', g.first, g.last), hd = heldBetween('drill', g.first, g.last);
       g.eventRate = he ? g.events / he : null;
       g.drillRate = hd ? g.drills / hd : null;
+      // Rank as written in each post; keep when it changed.
+      g.ranks = [];
+      for (const r of rs) if (r.rank && r.rank !== g.ranks[g.ranks.length - 1]?.rank) g.ranks.push({ rank: r.rank, date: r.date });
+      g.rank = g.ranks[g.ranks.length - 1]?.rank ?? null;
     }
     // Milestones: the date each person reached 10, 25, 50, 75, 100, 150, ... events or drills.
     const milestones = [];
@@ -112,7 +116,45 @@
       el.append(s);
     }
   }
+  // Higher number = higher rank; anything not listed sorts in the middle.
+  const LADDER = ['rct', 'pvt', 'pfc', 'cpl', 'sgt', 'ssgt', 'osgt', '1stsgt', '1sgt', 'qmsgt', 'sgtmaj', '2ndlt', '2lt', 'lt', '1stlt', '1lt', 'capt', 'cpt', 'maj', 'ltcol', 'col', 'gen'];
+  const rankOrder = (k) => { if (!k) return null; const i = LADDER.indexOf(k.toLowerCase().replace(/[^a-z0-9]/g, '')); return i < 0 ? 8 : i; };
+  const rankOf = (name) => all()?.people.get(name)?.rank ?? null;
+  const withRank = (name) => { const r = rankOf(name); return r ? `${r} ${name}` : name; };
+  function openCompany(co) {
+    showTab('companies');
+    dash.setParams({ co });
+    requestAnimationFrame(() => document.getElementById('company-card')?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+  }
+  function coButton(co) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'mb-name mb-co';
+    b.dataset.co = co;
+    b.textContent = co;
+    return b;
+  }
+  function coCell(tr, co, after) {
+    const c = td(tr, '');
+    if (!co) { c.textContent = '—'; return c; }
+    c.append(coButton(co));
+    if (after) c.append(after);
+    return c;
+  }
+  // Any company name marked with data-co opens that company's page.
+  document.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-co]');
+    if (!b) return;
+    ev.stopPropagation();
+    ev.preventDefault();
+    document.querySelector('dialog[open]')?.close();
+    openCompany(b.dataset.co);
+  }, true);
+  // Each name in a table comes with a Rank column just before it.
   function nameButton(tr, name) {
+    const rk = rankOf(name);
+    const rc = td(tr, rk ?? '—');
+    if (rk) rc.dataset.v = rankOrder(rk);
     const c = td(tr, '');
     const b = document.createElement('button');
     b.type = 'button';
@@ -207,6 +249,7 @@
       return [got ? `${fmt(got.count)} ${kindWord[k][1]}` : 'None yet', `${got ? `Reached ${dayName(got.date)}. ` : ''}${fmt(nx - n)} more to reach ${fmt(nx)}`];
     };
     const items = [
+      ['Rank history', g.ranks.length ? g.ranks[g.ranks.length - 1].rank : '—', g.ranks.length > 1 ? g.ranks.map((x) => `${x.rank} from ${dayName(x.date)}`).join(', ') : g.ranks.length ? `Since first seen, ${dayName(g.first)}` : null],
       ['Weeks in a row now', st.current ? plural(st.current, 'week', 'weeks') : 'Not this week'],
       ['Longest run', plural(st.longest, 'week', 'weeks')],
       ['Most often on', fav ? `${fav[0]}s (${plural(fav[1], 'time', 'times')})` : '—'],
@@ -237,10 +280,10 @@
     const b = all();
     if (!b) return;
     const list = b.milestones.filter((m) => inPeriod(m.date) && (P().kind === 'all' || P().kind === m.kind));
-    if (!list.length) return emptyRow(tb, 4, 'No milestones reached in this period.');
+    if (!list.length) return emptyRow(tb, 5, 'No milestones reached in this period.');
     for (const m of list.slice(0, 500)) {
       const tr = document.createElement('tr');
-      td(tr, dayName(m.date)); nameButton(tr, m.name); td(tr, m.company); td(tr, `${fmt(m.count)} ${kindWord[m.kind][1]}`);
+      td(tr, dayName(m.date)); nameButton(tr, m.name); coCell(tr, m.company); td(tr, `${fmt(m.count)} ${kindWord[m.kind][1]}`);
       tb.append(tr);
     }
   });
@@ -260,10 +303,10 @@
       }
     }
     list.sort((a, c) => a.left - c.left || c.next - a.next || a.name.localeCompare(c.name));
-    if (!list.length) return emptyRow(tb, 4, 'Nobody seen in the last 60 days.');
+    if (!list.length) return emptyRow(tb, 5, 'Nobody seen in the last 60 days.');
     for (const x of list.slice(0, 40)) {
       const tr = document.createElement('tr');
-      nameButton(tr, x.name); td(tr, x.company); td(tr, `${fmt(x.next)} ${kindWord[x.kind][1]}`); td(tr, fmt(x.left), 'la-n');
+      nameButton(tr, x.name); coCell(tr, x.company); td(tr, `${fmt(x.next)} ${kindWord[x.kind][1]}`); td(tr, fmt(x.left), 'la-n');
       tb.append(tr);
     }
   });
@@ -310,12 +353,12 @@
     tb.replaceChildren();
     const r = recruits();
     if (!r) return;
-    if (!r.length) return emptyRow(tb, 7, 'No recruits first seen in this period.');
+    if (!r.length) return emptyRow(tb, 8, 'No recruits first seen in this period.');
     for (const x of r) {
       const tr = document.createElement('tr');
       nameButton(tr, x.name); td(tr, dayName(x.first));
       pill(tr, x.status, STATUS.find(([s]) => s === x.status)[2]);
-      td(tr, x.joined ? `${x.joined}, ${dayName(x.joinDate)}` : '—');
+      coCell(tr, x.joined, x.joined ? `, ${dayName(x.joinDate)}` : null);
       td(tr, x.days == null ? '—' : fmt(x.days), 'la-n'); td(tr, fmt(x.first30), 'la-n'); td(tr, dayName(x.last));
       tb.append(tr);
     }
@@ -528,7 +571,7 @@
     for (const x of r.out) {
       const tr = document.createElement('tr');
       if (x.n === 0) pill(tr, 'Did not attend', 'bad'); else pill(tr, 'Attended', 'ok');
-      nameButton(tr, x.name); td(tr, x.company); td(tr, fmt(x.n), 'la-n');
+      nameButton(tr, x.name); coCell(tr, x.company); td(tr, fmt(x.n), 'la-n');
       td(tr, x.lastEvent ? dayName(x.lastEvent) : '—'); td(tr, x.lastDrill ? dayName(x.lastDrill) : '—'); td(tr, fmt(x.since), 'la-n');
       tb.append(tr);
     }
@@ -616,7 +659,7 @@
   }
   window.addEventListener('hashchange', route);
   // Shared with more.js.
-  window.LA = { all, inPeriod, td, pill, emptyRow, tiles, legend, nameButton, openPerson, matchName, weekStreaks, nextMilestone, kindWord, plural, addDays, daysBetween, dayOf, toDate, iso, load, save };
+  window.LA = { rankOf, rankOrder, withRank, openCompany, coButton, coCell, all, inPeriod, td, pill, emptyRow, tiles, legend, nameButton, openPerson, matchName, weekStreaks, nextMilestone, kindWord, plural, addDays, daysBetween, dayOf, toDate, iso, load, save };
   document.addEventListener('DOMContentLoaded', () => {
     route();
     const open = document.querySelector('.la-page:not([hidden])');

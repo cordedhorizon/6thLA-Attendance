@@ -162,3 +162,6 @@ tr[data-post] { cursor: pointer; }
 .mb-compare td.mb-down { color: var(--color-bad); }
 #cmp-mode { align-self: flex-start; }
 .la-card-head > .mb-csv { margin-left: auto; }
+.mb-th-sub { display: block; font-weight: 400; font-size: .75rem; }
+.mb-co { text-decoration-style: dotted; }
+.mb-roster h4 .mb-name { font-weight: 600; color: inherit; }

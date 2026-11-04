@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
-<link rel="stylesheet" href="site.css?v=23340999">
+<link rel="stylesheet" href="site.css?v=9973edcc">
 <script src="d3.min.js?v=6d64bd2f"></script>
 <script src="dash-shim.js?v=d2fb0a0d"></script>
 </head>
@@ -93,7 +93,7 @@
       <input id="find-member" type="search" list="all-members" placeholder="Find a member" aria-label="Find a member" autocomplete="off">
       <datalist id="all-members"></datalist>
       <p class="mb-asof" data-draw="mb-asof"></p>
-      <p class="mb-asof">Site updated Nov 4, 2026, 16:18 UTC</p>
+      <p class="mb-asof">Site updated Nov 4, 2026, 16:39 UTC</p>
     </div>
   </header>
 
@@ -231,7 +231,7 @@
       <p class="mb-note">Everyone now listed under this company who attended in the period picked above or in the last 90 days. Active means seen in the last 30 days, quiet 31 to 90 days. Counts are for the period picked above.</p>
       <div class="la-tablebox">
         <table class="la-table">
-          <thead><tr><th>Name</th><th>Status</th><th class="la-n">Events</th><th class="la-n">Drills</th><th>Last seen</th><th class="la-n">Days since seen</th></tr></thead>
+          <thead><tr><th>Rank</th><th>Name</th><th>Status</th><th class="la-n">Events</th><th class="la-n">Drills</th><th>Last seen</th><th class="la-n">Days since seen</th></tr></thead>
           <tbody data-draw="co-rows"></tbody>
         </table>
       </div>
@@ -269,6 +269,7 @@
         </div>
       </div>
       <dl class="la-stats">
+        <div><dt>Rank</dt><dd data-draw="p-stat" data-f="rank" data-source="people" data-field="rank">—</dd></div>
         <div><dt>Company</dt><dd data-draw="p-stat" data-f="company" data-source="people" data-field="company">—</dd></div>
         <div><dt>Events</dt><dd data-draw="p-stat" data-f="events" data-source="people" data-field="events">—</dd></div>
         <div><dt>Drills</dt><dd data-draw="p-stat" data-f="drills" data-source="people" data-field="drills">—</dd></div>
@@ -293,6 +294,7 @@
       <div class="la-tablebox">
         <table class="la-table la-people" data-source="people" data-row-key="year,day,name">
           <thead><tr>
+            <th data-field="rank" aria-sort="none"><button type="button" data-sort="rank_order">Rank</button></th>
             <th data-field="name" aria-sort="none"><button type="button" data-sort="name">Name</button></th>
             <th data-field="company" aria-sort="none"><button type="button" data-sort="company">Company</button></th>
             <th class="la-n" data-field="events" aria-sort="none"><button type="button" data-sort="events">Events</button></th>
@@ -320,7 +322,7 @@
       <p>Someone stays a recruit until they choose a company and are listed under it.</p>
       <div class="la-tablebox">
         <table class="la-table">
-          <thead><tr><th>Name</th><th>First seen</th><th>Status</th><th>Joined</th><th class="la-n">Days to join</th><th class="la-n">Attended in first 30 days</th><th>Last seen</th></tr></thead>
+          <thead><tr><th>Rank</th><th>Name</th><th>First seen</th><th>Status</th><th>Joined</th><th class="la-n">Days to join</th><th class="la-n">Attended in first 30 days</th><th>Last seen</th></tr></thead>
           <tbody data-draw="rc-rows"></tbody>
         </table>
       </div>
@@ -361,7 +363,7 @@
         <p>Members seen in the last 60 days who are close to their next milestone.</p>
         <div class="la-tablebox">
           <table class="la-table">
-            <thead><tr><th>Name</th><th>Company</th><th>Next milestone</th><th class="la-n">To go</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Name</th><th>Company</th><th>Next milestone</th><th class="la-n">To go</th></tr></thead>
             <tbody data-draw="ms-next"></tbody>
           </table>
         </div>
@@ -371,7 +373,7 @@
         <p>In the period picked above, newest first. Milestones are 10, 25, 50, 75, 100 and every 50 after that, for events and drills separately.</p>
         <div class="la-tablebox">
           <table class="la-table">
-            <thead><tr><th>Date</th><th>Name</th><th>Company</th><th>Milestone</th></tr></thead>
+            <thead><tr><th>Date</th><th>Rank</th><th>Name</th><th>Company</th><th>Milestone</th></tr></thead>
             <tbody data-draw="ms-rows"></tbody>
           </table>
         </div>
@@ -432,7 +434,7 @@
       <ul class="mb-key" data-draw="ab-key" aria-label="What the statuses mean"></ul>
       <div class="la-tablebox">
         <table class="la-table">
-          <thead><tr><th>Status</th><th>Name</th><th>Company</th><th class="la-n">Attended</th><th>Last event</th><th>Last drill</th><th class="la-n">Days since seen</th></tr></thead>
+          <thead><tr><th>Status</th><th>Rank</th><th>Name</th><th>Company</th><th class="la-n">Attended</th><th>Last event</th><th>Last drill</th><th class="la-n">Days since seen</th></tr></thead>
           <tbody data-draw="ab-rows"></tbody>
         </table>
       </div>
@@ -442,10 +444,10 @@
   <section id="compare" class="la-page" role="tabpanel" aria-labelledby="tab-compare" hidden>
     <div class="la-card" id="compare-form">
       <h2>Compare</h2>
-      <p>Put two members, or two stretches of time, side by side.</p>
+      <p>Put two members side by side, or the whole regiment or any company over any two stretches of time. For example, B Co against C Co this year, or the regiment now against a year ago.</p>
       <div class="la-seg" id="cmp-mode" role="group" aria-label="What to compare">
         <button type="button" data-mode="people" aria-pressed="true">Two members</button>
-        <button type="button" data-mode="periods" aria-pressed="false">Two periods</button>
+        <button type="button" data-mode="periods" aria-pressed="false">Regiment or companies</button>
       </div>
       <div class="bd-form" id="cmp-people">
         <label for="cmp-a">First member
@@ -456,15 +458,18 @@
         </label>
       </div>
       <div class="bd-form" id="cmp-periods" hidden>
-        <label for="cmp-p1f">First period from <input id="cmp-p1f" type="date"></label>
+        <label for="cmp-g1">First: who <select id="cmp-g1" class="mb-groups"></select></label>
+        <label for="cmp-p1f">from <input id="cmp-p1f" type="date"></label>
         <label for="cmp-p1t">to <input id="cmp-p1t" type="date"></label>
-        <label for="cmp-p2f">Second period from <input id="cmp-p2f" type="date"></label>
+        <label for="cmp-g2" class="mb-row-start">Second: who <select id="cmp-g2" class="mb-groups"></select></label>
+        <label for="cmp-p2f">from <input id="cmp-p2f" type="date"></label>
         <label for="cmp-p2t">to <input id="cmp-p2t" type="date"></label>
         <div class="bd-wide mb-quick">
           <span>Quick picks:</span>
           <button type="button" class="bd-small" data-quick="3m">Last 3 months vs the 3 months before</button>
           <button type="button" class="bd-small" data-quick="3my">Last 3 months vs a year earlier</button>
           <button type="button" class="bd-small" data-quick="y">This year so far vs last year</button>
+          <button type="button" class="bd-small" data-quick="same">Same dates for both</button>
         </div>
       </div>
     </div>
@@ -692,11 +697,14 @@ dash.calc('people', {
     const postInfo = new Map();
     for (const r of rs0) postInfo.set(r.post, r);
     const held = (kind, day, from, to) => { let n = 0; for (const p of postInfo.values()) if (p.kind === kind && (day === 'all' || p.day === day) && p.date >= from && p.date <= to) n += 1; return n; };
+    // Higher number = higher rank; anything not listed sorts in the middle.
+    const LADDER = ['rct', 'pvt', 'pfc', 'cpl', 'sgt', 'ssgt', 'osgt', '1stsgt', '1sgt', 'qmsgt', 'sgtmaj', '2ndlt', '2lt', 'lt', '1stlt', '1lt', 'capt', 'cpt', 'maj', 'ltcol', 'col', 'gen'];
+    const rankOrder = (k) => { if (!k) return null; const i = LADDER.indexOf(k.toLowerCase().replace(/[^a-z0-9]/g, '')); return i < 0 ? 8 : i; };
     const span = new Map();
     for (const r of [...rs0].sort((a, b) => a.date.localeCompare(b.date))) {
       const s = span.get(r.name);
-      if (!s) span.set(r.name, { first: r.date, last: r.date, company: r.company });
-      else { s.last = r.date; if (r.company !== 'Recruits' || s.company === 'Recruits') s.company = r.company; }
+      if (!s) span.set(r.name, { first: r.date, last: r.date, company: r.company, rank: r.rank ?? null });
+      else { s.last = r.date; if (r.rank) s.rank = r.rank; if (r.company !== 'Recruits' || s.company === 'Recruits') s.company = r.company; }
     }
     const years = [...new Set(rs0.map((r) => r.year))];
     const out = [];
@@ -715,7 +723,7 @@ dash.calc('people', {
         const from = year === 'all' || s.first > year + '-01-01' ? s.first : year + '-01-01';
         const to = year === 'all' || s.last < year + '-12-31' ? s.last : year + '-12-31';
         const he = held('event', day, from, to), hd = held('drill', day, from, to);
-        out.push({ year, day, name, company: s.company, events: g.events, drills: g.drills, total: g.events + g.drills,
+        out.push({ year, day, name, rank: s.rank, rank_order: rankOrder(s.rank), company: s.company, events: g.events, drills: g.drills, total: g.events + g.drills,
           event_rate: he ? g.events / he : null, drill_rate: hd ? g.drills / hd : null, first_seen: g.first, last_seen: g.last });
       }
     }
@@ -1343,7 +1351,7 @@ dash.draw('people-rows', (tb) => {
     tr.tabIndex = 0;
     tr.dataset.key = `${enc(x.year)},${enc(x.day)},${enc(x.name)}`;
     if (x.name === sel) tr.setAttribute('aria-selected', 'true');
-    cell(tr, x.name); cell(tr, x.company);
+    cell(tr, x.rank ?? '—'); cell(tr, x.name); cell(tr, x.company);
     cell(tr, fmt(x.events), 1); cell(tr, fmt(x.drills), 1);
     cell(tr, x.event_rate == null ? '—' : pct(x.event_rate), 1); cell(tr, x.drill_rate == null ? '—' : pct(x.drill_rate), 1);
     cell(tr, dayName(x.last_seen), 1);
@@ -1442,8 +1450,8 @@ dash.draw('multi-rows', (tb) => {
 </script>
 
 <script src="builder.js?v=8704e933"></script>
-<script src="members.js?v=3e682971"></script>
-<script src="more.js?v=f63c7b84"></script>
+<script src="members.js?v=791a25ee"></script>
+<script src="more.js?v=ced1694a"></script>
 <footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
 </main>
 </body>

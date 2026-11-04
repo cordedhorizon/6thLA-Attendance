@@ -2,7 +2,7 @@
 // company pages and compare. Runs after members.js and uses its helpers (window.LA).
 (function () {
   const L = window.LA;
-  const { all, td, pill, emptyRow, tiles, legend, nameButton, openPerson, matchName, plural, addDays, daysBetween, dayOf, iso } = L;
+  const { all, withRank, rankOf, coButton, td, pill, emptyRow, tiles, legend, nameButton, openPerson, matchName, plural, addDays, daysBetween, dayOf, iso } = L;
   const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const currentTab = () => document.querySelector('.la-page:not([hidden])')?.id || 'regiment';
 
@@ -34,11 +34,13 @@
     for (const c of [...groups.keys()].sort((a, z) => companyRank(a) - companyRank(z) || a.localeCompare(z))) {
       const sec = el('section');
       const names = groups.get(c).map((r) => r.name).sort((a, z) => a.localeCompare(z));
-      sec.append(el('h4', null, `${c} (${names.length})`));
+      const h4 = el('h4');
+      h4.append(coButton(c), ` (${names.length})`);
+      sec.append(h4);
       const ul = el('ul');
       for (const n of names) {
         const li = el('li');
-        const btn = el('button', 'mb-name', n);
+        const btn = el('button', 'mb-name', withRank(n));
         btn.type = 'button';
         btn.addEventListener('click', () => { dlg.close(); openPerson(n); });
         li.append(btn);
@@ -70,6 +72,7 @@
 
   // ---------- sortable tables ----------
   function sortValue(cell) {
+    if (cell.dataset.v != null && cell.dataset.v !== '') return +cell.dataset.v;
     const t = cell.textContent.trim();
     if (t === '' || t === '—') return null;
     if (/^-?[\d,]+(\.\d+)?%?$/.test(t)) return parseFloat(t.replace(/,/g, ''));
@@ -206,7 +209,7 @@
     const co = P().co;
     const r = co ? companyMembers(co) : null;
     if (!r) return;
-    if (!r.length) return emptyRow(tb, 6, 'Nobody to show for this period.');
+    if (!r.length) return emptyRow(tb, 7, 'Nobody to show for this period.');
     for (const x of r) {
       const tr = document.createElement('tr');
       nameButton(tr, x.name); pill(tr, x.status, x.status === 'Active' ? 'ok' : x.status === 'Quiet' ? 'warn' : 'bad');
@@ -219,6 +222,7 @@
   const cmp = {
     mode: document.getElementById('cmp-mode'), a: document.getElementById('cmp-a'), b: document.getElementById('cmp-b'),
     people: document.getElementById('cmp-people'), periods: document.getElementById('cmp-periods'),
+    g1: document.getElementById('cmp-g1'), g2: document.getElementById('cmp-g2'),
     p1f: document.getElementById('cmp-p1f'), p1t: document.getElementById('cmp-p1t'), p2f: document.getElementById('cmp-p2f'), p2t: document.getElementById('cmp-p2t'),
   };
   const cmpMode = () => (P().cmp === 'periods' ? 'periods' : 'people');
@@ -229,6 +233,7 @@
     const back = (d, months) => iso(d3.utcMonth.offset(new Date(d + 'T00:00:00Z'), -months));
     if (kind === '3m') { const s2 = addDays(back(end, 3), 1); dash.setParams({ p2f: s2, p2t: end, p1f: addDays(back(s2, 3), 0), p1t: addDays(s2, -1) }); }
     if (kind === '3my') { const s2 = addDays(back(end, 3), 1); dash.setParams({ p2f: s2, p2t: end, p1f: back(s2, 12), p1t: back(end, 12) }); }
+    if (kind === 'same') { const p = P(); if (p.p1f && p.p1t) dash.setParams({ p2f: p.p1f, p2t: p.p1t }); }
     if (kind === 'y') { const y = end.slice(0, 4); dash.setParams({ p2f: y + '-01-01', p2t: end, p1f: (y - 1) + '-01-01', p1t: (y - 1) + end.slice(4) }); }
   }
   if (cmp.mode) {
@@ -250,6 +255,7 @@
     for (const k of ['p1f', 'p1t', 'p2f', 'p2t']) {
       cmp[k].addEventListener('change', () => { if (!cmp[k].value || cmp[k].validity.valid) dash.setParams({ [k]: cmp[k].value || null }); });
     }
+    for (const [k, sel] of [['g1', cmp.g1], ['g2', cmp.g2]]) sel.addEventListener('change', () => dash.setParams({ [k]: sel.value || null }));
     for (const q of cmp.periods.querySelectorAll('[data-quick]')) q.addEventListener('click', () => quickPeriods(q.dataset.quick));
   }
   dash.onData(() => {
@@ -262,17 +268,24 @@
     if (document.activeElement !== cmp.a) cmp.a.value = p.ca || '';
     if (document.activeElement !== cmp.b) cmp.b.value = p.cb || '';
     for (const k of ['p1f', 'p1t', 'p2f', 'p2t']) if (document.activeElement !== cmp[k]) cmp[k].value = p[k] || '';
-    if (mode === 'periods' && !p.p1f && all()) quickPeriods('3my');
+    const b = all();
+    if (b && !cmp.g1.options.length) {
+      for (const sel of [cmp.g1, cmp.g2]) sel.replaceChildren(new Option('Whole regiment', ''), ...companiesIn(b.data).map((c) => new Option(c, c)));
+    }
+    cmp.g1.value = p.g1 || '';
+    cmp.g2.value = p.g2 || '';
+    if (mode === 'periods' && !p.p1f && b) quickPeriods('3my');
   });
+  const groupName = (g) => g || 'Whole regiment';
 
-  function periodStats(b, from, to) {
-    const rs = b.data.filter((r) => r.date >= from && r.date <= to);
+  function periodStats(b, from, to, group) {
+    const rs = b.data.filter((r) => r.date >= from && r.date <= to && (!group || r.company === group));
     const posts = b.posts.filter((x) => x.date >= from && x.date <= to);
     const held = (k) => posts.filter((x) => x.kind === k).length;
     const avg = (k) => (held(k) ? rs.filter((r) => r.kind === k).length / held(k) : null);
     const names = new Set(rs.map((r) => r.name));
     const fresh = [...names].filter((n) => b.people.get(n).first >= from).length;
-    const joined = [...b.people.values()].filter((g) => { const j = g.rows[0].company === 'Recruits' && g.rows.find((r) => r.company !== 'Recruits'); return j && j.date >= from && j.date <= to; }).length;
+    const joined = [...b.people.values()].filter((g) => { const j = g.rows[0].company === 'Recruits' && g.rows.find((r) => r.company !== 'Recruits'); return j && j.date >= from && j.date <= to && (!group || j.company === group); }).length;
     let w = 0, l = 0;
     for (const x of posts) {
       const m = x.kind === 'event' && x.score ? String(x.score).match(/^\s*(\d+)\s*[-–:]\s*(\d+)/) : null;
@@ -280,8 +293,8 @@
     }
     const byDay = new Map();
     for (const d of DAYS) {
-      const ps = posts.filter((x) => dayOf(x.date) === d);
-      if (ps.length) byDay.set(d, Math.round(d3.mean(ps, (x) => x.n) * 10) / 10);
+      const ps = new Set(posts.filter((x) => dayOf(x.date) === d).map((x) => x.post));
+      if (ps.size) byDay.set(d, Math.round(rs.filter((r) => ps.has(r.post)).length / ps.size * 10) / 10);
     }
     return { events: held('event'), drills: held('drill'), avgE: avg('event'), avgD: avg('drill'), people: names.size, fresh, joined, winRate: w + l ? w / (w + l) : null, byDay };
   }
@@ -293,7 +306,8 @@
     const ms = b.milestones.filter((m) => m.name === name);
     const msText = (k) => { const m = ms.find((x) => x.kind === k); return m ? `${fmt(m.count)} (${dayName(m.date)})` : 'None yet'; };
     return { g, rows: [
-      ['Company', g.company, g.company],
+      ['Rank', g.rank ?? '—', null],
+      ['Company', g.company, null, true],
       ['Events attended', fmt(g.events), g.events],
       ['Drills attended', fmt(g.drills), g.drills],
       ['Event rate', g.eventRate == null ? '—' : pct(g.eventRate), g.eventRate],
@@ -319,13 +333,14 @@
       return { b, mode: 'people', A, B, together };
     }
     if (!p.p1f || !p.p1t || !p.p2f || !p.p2t) return { b, empty: 'Pick both periods above.' };
-    return { b, mode: 'periods', A: periodStats(b, p.p1f, p.p1t), B: periodStats(b, p.p2f, p.p2t) };
+    return { b, mode: 'periods', A: periodStats(b, p.p1f, p.p1t, p.g1), B: periodStats(b, p.p2f, p.p2t, p.g2) };
   }
   const shortRange = (f, t) => `${dayName(f)} to ${dayName(t)}`;
   dash.draw('cmp-title', (h) => {
     const c = compareData();
     const p = P();
-    h.textContent = !c || c.empty ? 'Comparison' : c.mode === 'people' ? `${p.ca} and ${p.cb}` : 'Two periods';
+    h.textContent = !c || c.empty ? 'Comparison' : c.mode === 'people' ? `${withRank(p.ca)} and ${withRank(p.cb)}`
+      : (p.g1 || '') === (p.g2 || '') ? `${groupName(p.g1)}: two periods` : `${groupName(p.g1)} and ${groupName(p.g2)}`;
   });
   dash.draw('cmp-note', (n) => {
     const c = compareData();
@@ -334,26 +349,32 @@
     if (c.empty) { n.textContent = c.empty; return; }
     n.textContent = c.mode === 'people'
       ? `They were at ${plural(c.together, 'event or drill', 'events and drills')} together. All figures use their whole history.`
-      : `First period: ${shortRange(p.p1f, p.p1t)}. Second period: ${shortRange(p.p2f, p.p2t)}.`;
+      : `First: ${groupName(p.g1)}, ${shortRange(p.p1f, p.p1t)}. Second: ${groupName(p.g2)}, ${shortRange(p.p2f, p.p2t)}. Averages count only the people listed under that company; events and drills held and the win rate are the regiment's.`;
   });
   dash.draw('cmp-head', (tr) => {
     tr.replaceChildren();
     const c = compareData();
     const p = P();
     if (!c || c.empty) return;
-    const cols = c.mode === 'people' ? ['', p.ca, p.cb] : ['', 'First period', 'Second period', 'Change'];
-    cols.forEach((t, i) => { const th = el('th', i ? 'la-n' : null, t); tr.append(th); });
+    const cols = c.mode === 'people' ? [['', ''], [withRank(p.ca), ''], [withRank(p.cb), '']]
+      : [['', ''], [groupName(p.g1), shortRange(p.p1f, p.p1t)], [groupName(p.g2), shortRange(p.p2f, p.p2t)], ['Change', '']];
+    cols.forEach(([t, sub], i) => {
+      const th = el('th', i ? 'la-n' : null, t);
+      if (sub) th.append(el('span', 'mb-th-sub', sub));
+      tr.append(th);
+    });
   });
   dash.draw('cmp-rows', (tb) => {
     tb.replaceChildren();
     const c = compareData();
     if (!c || c.empty) return;
     if (c.mode === 'people') {
-      c.A.rows.forEach(([label, va, na], i) => {
+      c.A.rows.forEach(([label, va, na, isCo], i) => {
         const [, vb, nb] = c.B.rows[i];
         const tr = el('tr');
         td(tr, label);
-        const ca = td(tr, va, 'la-n'), cb = td(tr, vb, 'la-n');
+        const ca = td(tr, isCo ? '' : va, 'la-n'), cb = td(tr, isCo ? '' : vb, 'la-n');
+        if (isCo) { ca.append(coButton(va)); cb.append(coButton(vb)); }
         if (typeof na === 'number' && typeof nb === 'number' && na !== nb) (na > nb ? ca : cb).classList.add('mb-better');
         tb.append(tr);
       });
@@ -367,8 +388,8 @@
       ['Average drill attendance', A.avgD, B.avgD, one],
       ['Different people', A.people, B.people, fmt],
       ['First-timers', A.fresh, B.fresh, fmt],
-      ['Recruits who joined a company', A.joined, B.joined, fmt],
-      ['Event win rate', A.winRate, B.winRate, pct],
+      ['Recruits who joined', A.joined, B.joined, fmt],
+      ["Regiment's event win rate", A.winRate, B.winRate, pct],
     ];
     for (const [label, a, b2, f] of lines) {
       const tr = el('tr');
@@ -384,6 +405,7 @@
     }
   });
   const cmpColors = () => [dash.colors[0], dash.colors[1]];
+  const sides = (p) => [`${groupName(p.g1)}, ${shortRange(p.p1f, p.p1t)}`, `${groupName(p.g2)}, ${shortRange(p.p2f, p.p2t)}`];
   dash.draw('cmp-chart-title', (h) => {
     const c = compareData();
     h.textContent = !c || c.empty ? '' : c.mode === 'people' ? 'Events and drills attended each month' : 'Average attendance by day of the week';
@@ -392,7 +414,7 @@
     const c = compareData();
     const p = P();
     if (!c || c.empty) { box.replaceChildren(); return; }
-    const names = c.mode === 'people' ? [p.ca, p.cb] : ['First period', 'Second period'];
+    const names = c.mode === 'people' ? [withRank(p.ca), withRank(p.cb)] : sides(p);
     legend(box, names.map((n, i) => [n, cmpColors()[i]]));
   });
   dash.draw('cmp-chart', (box) => {
@@ -406,18 +428,36 @@
       const ma = per(c.A.g), mb = per(c.B.g);
       const ms = [...ma.keys(), ...mb.keys()];
       lineChart(box, monthsBetween(d3.min(ms), d3.max(ms)), [
-        { name: p.ca, color: cmpColors()[0], values: ma },
-        { name: p.cb, color: cmpColors()[1], values: mb },
+        { name: withRank(p.ca), color: cmpColors()[0], values: ma },
+        { name: withRank(p.cb), color: cmpColors()[1], values: mb },
       ], { height: 200, valueFmt: fmt, unit: ' attended' });
       return;
     }
     const days = DAYS.filter((d) => c.A.byDay.has(d) || c.B.byDay.has(d));
     if (!days.length) return;
     barChart(box, days, [
-      { name: 'First period', color: cmpColors()[0], values: c.A.byDay },
-      { name: 'Second period', color: cmpColors()[1], values: c.B.byDay },
+      { name: sides(p)[0], color: cmpColors()[0], values: c.A.byDay },
+      { name: sides(p)[1], color: cmpColors()[1], values: c.B.byDay },
     ], { height: 200, decimals: true, valueFmt: one, unit: ' average', catLabel: (d, bw) => (bw < 34 ? d.slice(0, 2) : d.slice(0, 3)), tipTitle: (d) => d + 's', csvLabel: 'Day' });
   });
+
+  // ---------- company names on the page's own tables and cards open the company page ----------
+  function linkCompanies() {
+    for (const tr of document.querySelectorAll('[data-draw="people-rows"] tr')) {
+      const c = tr.cells[2];
+      if (c && !c.querySelector('[data-co]') && c.textContent.trim() && c.textContent.trim() !== '—') { const co = c.textContent.trim(); c.replaceChildren(coButton(co)); }
+    }
+    for (const dd of document.querySelectorAll('[data-draw="p-stat"][data-f="company"]')) {
+      const co = dd.textContent.trim();
+      if (co && co !== '—' && !dd.querySelector('[data-co]')) dd.replaceChildren(coButton(co));
+    }
+    for (const h of document.querySelectorAll('.la-mini h4')) {
+      const co = h.textContent.trim();
+      if (co && !h.querySelector('[data-co]') && h.closest('#companies')) h.replaceChildren(coButton(co));
+    }
+  }
+  dash.onData(() => requestAnimationFrame(linkCompanies));
+  for (const tb of document.querySelectorAll('[data-draw="people-rows"]')) new MutationObserver(linkCompanies).observe(tb, { childList: true });
 
   // ---------- top controls on the new tab ----------
   const prevShowTab = window.showTab;
@@ -427,8 +467,8 @@
   };
 
   // ---------- links remember the view; Back moves between tabs ----------
-  const KEYS = ['period', 'from', 'to', 'day', 'kind', 'grain', 'person', 'co', 'cmp', 'ca', 'cb', 'p1f', 'p1t', 'p2f', 'p2t'];
-  const ONLY_ON = { person: 'people', co: 'companies', cmp: 'compare', ca: 'compare', cb: 'compare', p1f: 'compare', p1t: 'compare', p2f: 'compare', p2t: 'compare' };
+  const KEYS = ['period', 'from', 'to', 'day', 'kind', 'grain', 'person', 'co', 'cmp', 'ca', 'cb', 'g1', 'g2', 'p1f', 'p1t', 'p2f', 'p2t'];
+  const ONLY_ON = { person: 'people', co: 'companies', cmp: 'compare', ca: 'compare', cb: 'compare', g1: 'compare', g2: 'compare', p1f: 'compare', p1t: 'compare', p2f: 'compare', p2t: 'compare' };
   dash.setLink = () => {}; // the page's own tab links are replaced by the fuller ones below
   function wantHash() {
     const p = dash.params();
@@ -440,7 +480,7 @@
       if ((k === 'from' || k === 'to') && p.period !== 'custom') continue;
       if (k === 'grain' && v === 'month') continue;
       if (ONLY_ON[k] && ONLY_ON[k] !== tab) continue;
-      if (k.startsWith('p') && k.length === 3 && p.cmp !== 'periods') continue;
+      if (((k.startsWith('p') && k.length === 3) || k === 'g1' || k === 'g2') && p.cmp !== 'periods') continue;
       if ((k === 'ca' || k === 'cb') && p.cmp === 'periods') continue;
       q.set(k, v);
     }

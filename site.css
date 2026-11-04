@@ -165,3 +165,8 @@ tr[data-post] { cursor: pointer; }
 .mb-th-sub { display: block; font-weight: 400; font-size: .75rem; }
 .mb-co { text-decoration-style: dotted; }
 .mb-roster h4 .mb-name { font-weight: 600; color: inherit; }
+.mb-ranks { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.mb-more summary { cursor: pointer; color: var(--color-fg-muted); text-decoration: underline; text-decoration-color: var(--color-border-line); text-underline-offset: 2px; width: fit-content; }
+.mb-more summary::-webkit-details-marker { display: none; }
+.mb-more { margin-top: 1px; }
+.mb-more summary:focus-visible { outline: 2px solid var(--color-fg-muted); outline-offset: 1px; }

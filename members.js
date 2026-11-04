@@ -224,6 +224,24 @@
     return { current, longest };
   }
 
+  // One rank per line, newest first; past three, the older ones fold away behind "Show all".
+  function rankHistory(g) {
+    const SHOW = 3;
+    const list = [...g.ranks].reverse().map((x, i, arr) => `${x.rank}: ${i === arr.length - 1 ? 'first seen' : 'from'} ${dayName(x.date)}`);
+    const ul = (items) => { const u = document.createElement('ul'); u.className = 'mb-ranks'; for (const t of items) { const li = document.createElement('li'); li.textContent = t; u.append(li); } return u; };
+    const box = document.createDocumentFragment();
+    box.append(ul(list.slice(0, SHOW)));
+    if (list.length > SHOW) {
+      const det = document.createElement('details');
+      det.className = 'mb-more';
+      const sm = document.createElement('summary');
+      sm.textContent = `Show ${list.length - SHOW} earlier`;
+      det.addEventListener('toggle', () => { sm.textContent = det.open ? 'Show less' : `Show ${list.length - SHOW} earlier`; });
+      det.append(sm, ul(list.slice(SHOW)));
+      box.append(det);
+    }
+    return box;
+  }
   dash.draw('p-extra', (el) => {
     el.replaceChildren();
     const b = all();
@@ -249,7 +267,7 @@
       return [got ? `${fmt(got.count)} ${kindWord[k][1]}` : 'None yet', `${got ? `Reached ${dayName(got.date)}. ` : ''}${fmt(nx - n)} more to reach ${fmt(nx)}`];
     };
     const items = [
-      ['Rank history', g.ranks.length ? g.ranks[g.ranks.length - 1].rank : '—', g.ranks.length > 1 ? g.ranks.map((x) => `${x.rank} from ${dayName(x.date)}`).join(', ') : g.ranks.length ? `Since first seen, ${dayName(g.first)}` : null],
+      ['Rank history', g.ranks.length ? g.ranks[g.ranks.length - 1].rank : '—', g.ranks.length ? rankHistory(g) : null],
       ['Weeks in a row now', st.current ? plural(st.current, 'week', 'weeks') : 'Not this week'],
       ['Longest run', plural(st.longest, 'week', 'weeks')],
       ['Most often on', fav ? `${fav[0]}s (${plural(fav[1], 'time', 'times')})` : '—'],
@@ -265,7 +283,7 @@
       const dt = document.createElement('dt'); dt.textContent = k;
       const dd = document.createElement('dd'); dd.textContent = v;
       d.append(dt, dd);
-      if (sub) { const s2 = document.createElement('dd'); s2.className = 'mb-sub'; s2.textContent = sub; d.append(s2); }
+      if (sub) { const s2 = document.createElement('dd'); s2.className = 'mb-sub'; if (sub instanceof Node) s2.append(sub); else s2.textContent = sub; d.append(s2); }
       dl.append(d);
     }
     const note = document.createElement('p');

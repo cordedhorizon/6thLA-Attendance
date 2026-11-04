@@ -364,14 +364,28 @@ rep('''</div>
 dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabpanel" aria-labelledby="tab-builder" hidden>
     <div class="la-card" id="builder-form">
       <h2>Build a chart</h2>
-      <p>Pick what to show and how to break it down, then narrow it with the period and filters below. Charts you add appear here and at the bottom of the Regiment tab, saved in this browser. Use Copy link to share one.</p>
+      <p>Chart almost anything on the site: attendance, first-timers, recruits joining, promotions, milestones and results. Pick what to show and how to break it down, then narrow it with the period and filters below. Charts you add appear here and at the bottom of the Regiment tab, saved in this browser. Use Copy link to share one.</p>
       <div class="bd-form">
         <label for="bd-measure">Show
           <select id="bd-measure">
-            <option value="avg">Average attendance</option>
-            <option value="event">Attendance at each event</option>
-            <option value="held">Events and drills held</option>
-            <option value="people">Different people</option>
+            <optgroup label="Attendance">
+              <option value="avg">Average attendance</option>
+              <option value="event">Attendance at each event</option>
+              <option value="share">Share of attendance (%)</option>
+              <option value="held">Events and drills held</option>
+              <option value="people">Different people</option>
+              <option value="attended">Times one person attended</option>
+            </optgroup>
+            <optgroup label="Members">
+              <option value="fresh">First-timers</option>
+              <option value="joined">Recruits who joined a company</option>
+              <option value="promos">Promotions</option>
+              <option value="milestones">Milestones reached</option>
+            </optgroup>
+            <optgroup label="Results">
+              <option value="winrate">Event win rate (%)</option>
+              <option value="results">Wins and losses</option>
+            </optgroup>
           </select>
         </label>
         <label for="bd-x">Across
@@ -382,6 +396,7 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
             <option value="year">Year</option>
             <option value="day">Day of the week</option>
             <option value="company">Company</option>
+            <option value="rank">Rank</option>
           </select>
         </label>
         <label for="bd-split">Split by
@@ -390,6 +405,8 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
             <option value="kind">Event or drill</option>
             <option value="company">Company</option>
             <option value="day">Day of the week</option>
+            <option value="rank">Rank</option>
+            <option value="result">Result (win, loss, draw)</option>
           </select>
         </label>
         <label for="bd-type">Chart
@@ -403,6 +420,9 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
         <label for="bd-company">Company
           <select id="bd-company"><option value="all">All companies</option></select>
         </label>
+        <label for="bd-rank">Rank
+          <select id="bd-rank"><option value="all">All ranks</option></select>
+        </label>
         <label for="bd-person">Person
           <input id="bd-person" list="bd-people" placeholder="Anyone" autocomplete="off">
           <datalist id="bd-people"></datalist>
@@ -413,6 +433,7 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
       </div>
       <div class="bd-filters-slot"><span class="bd-slot-label">Period and filters</span></div>
       <p class="bd-preview-desc"></p>
+      <p class="mb-note bd-measure-note"></p>
       <p class="mb-note bd-pick-tip" hidden>Click a point to see who was at that event or drill.</p>
       <div class="la-legend bd-preview-legend"></div>
       <div class="la-chart" data-draw="bd-preview"></div>

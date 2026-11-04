@@ -9,11 +9,34 @@
   const MEASURES = {
     avg: 'Average attendance',
     event: 'Attendance at each event',
+    share: 'Share of attendance',
     held: 'Events and drills held',
     people: 'Different people',
+    attended: 'Times attended',
+    fresh: 'First-timers',
+    joined: 'Recruits who joined a company',
+    promos: 'Promotions',
+    milestones: 'Milestones reached',
+    winrate: 'Event win rate',
+    results: 'Wins and losses',
   };
-  const ACROSS = { post: 'Each event or drill', month: 'Month', quarter: 'Quarter', year: 'Year', day: 'Day of the week', company: 'Company' };
-  const SPLITS = { none: 'Nothing', kind: 'Event or drill', company: 'Company', day: 'Day of the week' };
+  // What each measure counts, shown under the preview.
+  const NOTES = {
+    avg: 'How many attended a typical event or drill.',
+    share: "Each group's part of all attendance in that column, as a percentage.",
+    attended: 'Pick a person below. Counts the events and drills they attended.',
+    fresh: "People counted on the day of their first appearance in our records.",
+    joined: 'Counted on the day a recruit first appears under a company, by the company they joined.',
+    promos: 'Counted on the first post that lists the new rank. Rank means the new rank.',
+    milestones: 'Each time someone reaches 10, 25, 50, 75, 100 or every 50 after that, counted for events and drills separately.',
+    winrate: 'Wins out of events won or lost. Company, rank and person filters don\'t apply, since the regiment plays as one.',
+    results: 'Events with a score, split by result. Pick Nothing under Split by to count all scored events.',
+  };
+  const PERCENT = new Set(['share', 'winrate']);
+  const REGIMENT_ONLY = new Set(['winrate', 'results']);
+  const ACROSS = { post: 'Each event or drill', month: 'Month', quarter: 'Quarter', year: 'Year', day: 'Day of the week', company: 'Company', rank: 'Rank' };
+  const SPLITS = { none: 'Nothing', kind: 'Event or drill', company: 'Company', day: 'Day of the week', rank: 'Rank', result: 'Result' };
+  const RESULT_NAMES = { W: 'Won', L: 'Lost', D: 'Drew' };
 
   // ---------- choose charts ----------
   const cards = () => [...document.querySelectorAll('.la-page > .la-card[id], .la-page > .la-grid > .la-card[id]')]
@@ -59,17 +82,20 @@
     split: document.getElementById('bd-split'),
     type: document.getElementById('bd-type'),
     company: document.getElementById('bd-company'),
+    rank: document.getElementById('bd-rank'),
     person: document.getElementById('bd-person'),
     title: document.getElementById('bd-title'),
   };
   const readForm = () => ({
     measure: form.measure.value, x: form.x.value, split: form.split.value, type: form.type.value,
-    company: form.company.value, person: form.person.value.trim(), title: form.title.value.trim(),
+    company: form.company.value, rank: form.rank.value, person: form.person.value.trim(), title: form.title.value.trim(),
   });
   function writeForm(cfg) {
     for (const k of ['measure', 'x', 'split', 'type']) if (cfg[k]) form[k].value = cfg[k];
     form.company.dataset.want = cfg.company || 'all';
     form.company.value = cfg.company || 'all';
+    form.rank.dataset.want = cfg.rank || 'all';
+    form.rank.value = cfg.rank || 'all';
     form.person.value = cfg.person || '';
     form.title.value = cfg.title || '';
     syncForm();
@@ -79,8 +105,13 @@
     if (changed === 'measure' && form.measure.value === 'event') form.x.value = 'post';
     if (form.x.value === 'post') form.measure.value = 'event';
     else if (form.measure.value === 'event') form.measure.value = 'avg';
-    for (const o of form.split.options) o.disabled = o.value !== 'none' && o.value === form.x.value;
-    if (form.split.value === form.x.value) form.split.value = 'none';
+    if (changed === 'measure' && form.measure.value === 'results' && form.split.value === 'none') form.split.value = 'result';
+    const team = REGIMENT_ONLY.has(form.measure.value);
+    for (const o of form.x.options) o.disabled = team && (o.value === 'company' || o.value === 'rank');
+    if (form.x.selectedOptions[0]?.disabled) form.x.value = 'month';
+    for (const o of form.split.options) o.disabled = (o.value !== 'none' && o.value === form.x.value) || (team && ['company', 'rank'].includes(o.value));
+    if (form.split.selectedOptions[0]?.disabled) form.split.value = 'none';
+    for (const n of document.querySelectorAll('.bd-measure-note')) n.textContent = NOTES[form.measure.value] ?? '';
   }
 
   function describe(cfg) {
@@ -88,6 +119,7 @@
     if (cfg.split !== 'none') s += `, split by ${SPLITS[cfg.split].toLowerCase()}`;
     const only = [];
     if (cfg.company && cfg.company !== 'all') only.push(cfg.company);
+    if (cfg.rank && cfg.rank !== 'all') only.push(cfg.rank);
     if (cfg.person) only.push(cfg.person);
     if (only.length) s += ` (${only.join(', ')} only)`;
     return s;
@@ -100,44 +132,85 @@
     year: (r) => r.date.slice(0, 4),
     day: (r) => r.day,
     company: (r) => r.company,
+    rank: (r) => r.rank || 'No rank',
   };
-  const sKey = { none: () => 'All', kind: (r) => kindName[r.kind], company: (r) => r.company, day: (r) => r.day };
+  const sKey = { none: () => 'All', kind: (r) => kindName[r.kind], company: (r) => r.company, day: (r) => r.day, rank: (r) => r.rank || 'No rank', result: (r) => RESULT_NAMES[r.res] ?? 'No score' };
+  const scoreOf = (s) => { const m = s ? String(s).match(/^\s*(\d+)\s*[-–:]\s*(\d+)/) : null; return m ? (+m[1] > +m[2] ? 'W' : +m[1] < +m[2] ? 'L' : 'D') : null; };
+  const isMilestone = (n) => n === 10 || n === 25 || n === 75 || (n >= 50 && n % 50 === 0);
+
+  // The records each measure counts, from the full history (filters are applied after).
+  let recCache = { data: null, by: {} };
+  function records(measure) {
+    const b = window.LA?.all();
+    if (!b) return null;
+    if (recCache.data !== b.data) recCache = { data: b.data, by: {} };
+    if (recCache.by[measure]) return recCache.by[measure];
+    const people = [...b.people.values()];
+    let out;
+    if (measure === 'fresh') out = people.map((g) => g.rows[0]);
+    else if (measure === 'joined') out = people.map((g) => g.rows[0].company === 'Recruits' && g.rows.find((r) => r.company !== 'Recruits')).filter(Boolean);
+    else if (measure === 'promos') out = people.flatMap((g) => g.ranks.slice(1).map((x) => g.rows.find((r) => r.date >= x.date && r.rank === x.rank) ?? g.rows.find((r) => r.date >= x.date)));
+    else if (measure === 'milestones') {
+      out = [];
+      for (const g of people) { const n = { event: 0, drill: 0 }; for (const r of g.rows) { n[r.kind] += 1; if (isMilestone(n[r.kind])) out.push(r); } }
+    } else if (measure === 'winrate' || measure === 'results') {
+      const seen = new Map();
+      for (const r of b.data) if (r.kind === 'event' && !seen.has(r.post)) { const res = scoreOf(r.score); if (res) seen.set(r.post, { ...r, res, company: null, name: null, rank: null }); }
+      out = [...seen.values()];
+    } else out = b.data.map((r) => (r.kind === 'event' ? { ...r, res: scoreOf(r.score) } : r));
+    recCache.by[measure] = out;
+    return out;
+  }
 
   let postInfo = new Map();
   function aggregate(cfg) {
-    const all = rows('attendance');
+    const measure = MEASURES[cfg.measure] ? cfg.measure : 'avg';
+    if (measure === 'attended' && !cfg.person) return { need: 'Pick a person below to show how often they attended.' };
+    const all = records(measure);
     if (!all) return null;
+    const team = REGIMENT_ONLY.has(measure);
     const p = P();
     const rs = [];
     for (const r0 of all) {
+      if (p.from && r0.date < p.from) continue;
+      if (p.to && r0.date > p.to) continue;
       if (p.year !== 'all' && !r0.date.startsWith(p.year)) continue;
       if (p.kind !== 'all' && r0.kind !== p.kind) continue;
       const day = DAYS[new Date(r0.date + 'T00:00:00Z').getUTCDay()];
       if (p.day !== 'all' && day !== p.day) continue;
-      if (cfg.company && cfg.company !== 'all' && r0.company !== cfg.company) continue;
-      if (cfg.person && r0.name.toLowerCase() !== cfg.person.toLowerCase()) continue;
+      if (!team && cfg.company && cfg.company !== 'all' && r0.company !== cfg.company) continue;
+      if (!team && cfg.rank && cfg.rank !== 'all' && r0.rank !== cfg.rank) continue;
+      if (!team && cfg.person && r0.name.toLowerCase() !== cfg.person.toLowerCase()) continue;
       rs.push({ ...r0, day });
     }
     const cells = new Map();
     const xPosts = new Map();
+    const xTotal = new Map();
     for (const r of rs) {
       const x = xKey[cfg.x](r), s = sKey[cfg.split](r);
       if (!xPosts.has(x)) xPosts.set(x, new Set());
       xPosts.get(x).add(r.post);
       const k = x + '\u0000' + s;
-      if (!cells.has(k)) cells.set(k, { x, s, n: 0, posts: new Set(), names: new Set() });
+      if (!cells.has(k)) cells.set(k, { x, s, n: 0, posts: new Set(), names: new Set(), wins: 0, decided: 0 });
       const c = cells.get(k);
       c.n += 1; c.posts.add(r.post); c.names.add(r.name);
+      if (r.res === 'W' || r.res === 'L') { c.decided += 1; if (r.res === 'W') c.wins += 1; }
+      xTotal.set(x, (xTotal.get(x) ?? 0) + 1);
     }
     const value = (c) => {
-      if (cfg.measure === 'event') return c.n;
-      if (cfg.measure === 'held') return c.posts.size;
-      if (cfg.measure === 'people') return c.names.size;
+      if (measure === 'event') return c.n;
+      if (measure === 'held') return c.posts.size;
+      if (measure === 'people') return c.names.size;
+      if (['attended', 'fresh', 'joined', 'promos', 'milestones', 'results'].includes(measure)) return c.n;
+      if (measure === 'share') return Math.round(c.n / xTotal.get(c.x) * 1000) / 10;
+      if (measure === 'winrate') return c.decided ? Math.round(c.wins / c.decided * 1000) / 10 : null;
       const denom = cfg.split === 'company' ? xPosts.get(c.x).size : c.posts.size;
       return Math.round(c.n / denom * 10) / 10;
     };
     let xs = [...new Set([...cells.values()].map((c) => c.x))];
+    const byRank = (a, z) => (window.LA?.rankOrder(z) ?? 0) - (window.LA?.rankOrder(a) ?? 0) || a.localeCompare(z);
     if (cfg.x === 'day') xs = DAYS.filter((d) => xs.includes(d));
+    else if (cfg.x === 'rank') xs.sort(byRank);
     else if (cfg.x === 'company') xs.sort((a, b) => companyRank(a) - companyRank(b) || a.localeCompare(b));
     else if (cfg.x === 'post') {
       const info = new Map(rs.map((r) => [r.post, r]));
@@ -149,12 +222,16 @@
     if (cfg.split === 'day') ss = DAYS.filter((d) => ss.includes(d));
     else if (cfg.split === 'company') ss.sort((a, b) => companyRank(a) - companyRank(b) || a.localeCompare(b));
     else if (cfg.split === 'kind') ss = ['Events', 'Drills'].filter((k) => ss.includes(k));
+    else if (cfg.split === 'rank') ss.sort(byRank);
+    else if (cfg.split === 'result') ss = ['Won', 'Lost', 'Drew', 'No score'].filter((k) => ss.includes(k));
     const color = (s, i) => (cfg.split === 'kind' ? kindColor(s === 'Drills' ? 'drill' : 'event')
-      : cfg.split === 'company' ? companyColor(s) : dash.colors[i % dash.colors.length]);
+      : cfg.split === 'company' ? companyColor(s)
+      : cfg.split === 'result' ? ({ Won: dash.colors[2], Lost: dash.colors[6] }[s] ?? 'var(--cds-chart-muted)')
+      : dash.colors[i % dash.colors.length]);
     const series = ss.map((s, i) => ({
       name: cfg.split !== 'none' ? s : cfg.x === 'post' ? 'Attendance' : MEASURES[cfg.measure],
       color: color(s, i),
-      values: new Map([...cells.values()].filter((c) => c.s === s).map((c) => [c.x, value(c)])),
+      values: new Map([...cells.values()].filter((c) => c.s === s).map((c) => [c.x, value(c)]).filter(([, v]) => v != null)),
     }));
     return { xs, series };
   }
@@ -166,20 +243,20 @@
     el.classList.toggle('dash-skeleton', st === 'loading');
     if (st !== 'ok') return;
     const a = aggregate(cfg);
-    if (!a || !a.xs.length) {
+    if (!a || a.need || !a.xs.length) {
       const m = document.createElement('div');
       m.className = 'la-failed bd-empty';
-      m.textContent = 'Nothing matches these choices and the filters above.';
+      m.textContent = a?.need ?? 'Nothing matches these choices and the filters above.';
       el.append(m);
       return;
     }
     const opts = {
       height,
-      valueFmt: cfg.measure === 'avg' ? one : fmt,
+      valueFmt: PERCENT.has(cfg.measure) ? (v) => v + '%' : cfg.measure === 'avg' ? one : fmt,
       unit: '',
-      decimals: cfg.measure === 'avg',
+      decimals: cfg.measure === 'avg' || PERCENT.has(cfg.measure),
       stack: cfg.type === 'stacked',
-      totalLabel: { avg: 'Average attendance', event: 'Attendance', held: 'Events and drills held', people: 'Total' }[cfg.measure],
+      totalLabel: { avg: 'Average attendance', event: 'Attendance', held: 'Events and drills held', people: 'Total', share: 'Total', fresh: 'First-timers', joined: 'Recruits who joined', promos: 'Promotions', milestones: 'Milestones', results: 'Scored events', attended: 'Times attended' }[cfg.measure] ?? 'Total',
     };
     if (cfg.x === 'post') {
       const info = postInfo;
@@ -207,7 +284,7 @@
     const lg = document.createElement('div');
     lg.className = 'la-legend';
     const a = aggregate(cfg);
-    if (!a || a.series.length < 2) return lg;
+    if (!a || !a.series || a.series.length < 2) return lg;
     for (const s of a.series) {
       const span = document.createElement('span');
       const i = document.createElement('i');
@@ -308,6 +385,10 @@
     const want = form.company.dataset.want || 'all';
     form.company.replaceChildren(new Option('All companies', 'all'), ...companiesIn(r).map((c) => new Option(c, c)));
     form.company.value = want;
+    const ranks = [...new Set(r.map((x) => x.rank).filter(Boolean))].sort((a, z) => (window.LA?.rankOrder(z) ?? 0) - (window.LA?.rankOrder(a) ?? 0));
+    const wantRank = form.rank.dataset.want || 'all';
+    form.rank.replaceChildren(new Option('All ranks', 'all'), ...ranks.map((k) => new Option(k, k)));
+    form.rank.value = ranks.includes(wantRank) ? wantRank : 'all';
     const names = [...new Set(r.map((x) => x.name))].sort((a, b) => a.localeCompare(b));
     for (const dl of document.querySelectorAll('#bd-people')) dl.replaceChildren(...names.map((n) => new Option(n)));
   });

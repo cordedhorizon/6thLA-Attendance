@@ -88,3 +88,47 @@ body { font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-b
 .bd-filters-slot .la-filters { justify-content: flex-start; }
 .bd-filters-slot .bd-choose { display: none; }
 .bd-filters-slot:not(:has(.la-filters)) { display: none; }
+
+/* Site-only: members, milestones, recruits, results, attendance check, CSV */
+.la-head { position: relative; }
+.mb-find { margin-top: var(--cds-gap-sm); }
+.mb-find input { font: inherit; font-size: var(--cds-font-size-body); width: min(22rem, 100%); box-sizing: border-box; padding: 6px 10px; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); }
+.mb-find input:focus-visible, .mb-people-add input:focus-visible { outline: 2px solid var(--color-fg-muted); outline-offset: 1px; }
+input.mb-nomatch { border-color: var(--color-bad) !important; }
+.mb-person-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.mb-profile { padding-top: var(--cds-pad-sm); border-top: 1px solid var(--color-border-line); }
+.mb-profile:empty { display: none; }
+.mb-profile-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: var(--cds-gap-md) var(--cds-gap-lg); margin: 0; }
+.mb-profile-list div { display: flex; flex-direction: column; min-width: 0; }
+.mb-profile-list dt { font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mb-profile-list dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: var(--cds-font-weight-medium); }
+.mb-note { margin: var(--cds-gap-sm) 0 0; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mb-name { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: var(--color-border-line); text-underline-offset: 2px; }
+.mb-name:hover { text-decoration-color: currentColor; }
+.mb-name:focus-visible { outline: 2px solid var(--color-fg-muted); outline-offset: 1px; }
+.mb-pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .75rem; font-weight: 600; border: 1px solid currentColor; white-space: nowrap; }
+.mb-ok { color: var(--color-ok); }
+.mb-warn { color: var(--color-warn); }
+.mb-bad { color: var(--color-bad); }
+.mb-empty { color: var(--color-fg-muted); text-align: center; padding: var(--cds-pad-lg) !important; }
+.mb-checks { display: flex; flex-wrap: wrap; gap: var(--cds-gap-sm) var(--cds-gap-lg); font-size: var(--cds-font-size-caption); }
+.mb-checks label, .mb-inline { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }
+.mb-checks input, .mb-inline input { accent-color: var(--series-1); margin: 0; }
+.mb-people { display: flex; flex-direction: column; gap: var(--cds-gap-sm); }
+.mb-people-add { display: flex; gap: 6px; flex-wrap: wrap; }
+.mb-people-add input { font: inherit; font-size: var(--cds-font-size-body); padding: 6px 8px; border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-bg); color: var(--color-fg); min-width: 0; flex: 1 1 12rem; max-width: 22rem; }
+.mb-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mb-chips .mb-note { margin: 0; }
+.mb-chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border: 1px solid var(--color-border-line); border-radius: 999px; background: var(--color-bg); font-size: var(--cds-font-size-caption); }
+.mb-chip button { font: inherit; border: 0; background: none; color: var(--color-fg-muted); cursor: pointer; padding: 0 4px; line-height: 1; font-size: 1rem; }
+.mb-summary { margin: 0; font-size: var(--cds-font-size-body) !important; color: var(--color-fg) !important; }
+.la-card.mb-has-csv { position: relative; }
+.la-card.mb-has-csv > .mb-csv { position: absolute; top: var(--cds-pad-md); right: var(--cds-pad-md); }
+.la-card.mb-has-csv > h2 { padding-right: 8.5rem; }
+@media (max-width: 480px) {
+  .la-card.mb-has-csv > .mb-csv { position: static; align-self: flex-start; order: 1; }
+  .la-card.mb-has-csv > h2 { padding-right: 0; }
+  .la-card.mb-has-csv > * { order: 2; }
+  .la-card.mb-has-csv > h2 { order: 0; }
+}
+.mb-profile-list dd.mb-sub { font-weight: 400; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); }

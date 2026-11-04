@@ -73,6 +73,8 @@
     colors: [1, 2, 3, 4, 5, 6, 7, 8].map((i) => `var(--series-${i})`),
     calc(id, o) { calcs[id] = o; },
     data,
+    // Site-only: a source's rows before the period picker filters them.
+    raw(id) { return loaded[id] ?? { status: 'loading', data: [] }; },
     onData(fn) { listeners.push(fn); if (started) fn(); },
     draw(name, fn) { if (fn) draws.set(name, fn); else if (started) run(name); },
     params() { return { ...params }; },

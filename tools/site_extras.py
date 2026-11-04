@@ -13,7 +13,34 @@ def rep(old, new):
     page = page.replace(old, new)
 
 rep("const tabs = ['regiment', 'companies', 'people', 'checks'];",
-    "const tabs = ['regiment', 'companies', 'people', 'checks', 'builder'];")
+    "const tabs = ['regiment', 'companies', 'people', 'recruits', 'results', 'milestones', 'check', 'checks', 'builder'];")
+rep('''      <button id="tab-people" role="tab" data-tab="people" aria-selected="false">People</button>
+''', '''      <button id="tab-people" role="tab" data-tab="people" aria-selected="false">People</button>
+      <button id="tab-recruits" role="tab" data-tab="recruits" aria-selected="false">Recruits</button>
+      <button id="tab-results" role="tab" data-tab="results" aria-selected="false">Results</button>
+      <button id="tab-milestones" role="tab" data-tab="milestones" aria-selected="false">Milestones</button>
+      <button id="tab-check" role="tab" data-tab="check" aria-selected="false">Attendance check</button>
+''')
+# find a member, in the header
+rep('''  </header>
+''', '''    <div class="mb-find">
+      <input id="find-member" type="search" list="all-members" placeholder="Find a member" aria-label="Find a member" autocomplete="off">
+      <datalist id="all-members"></datalist>
+    </div>
+  </header>
+''')
+# profile extras on the person card
+rep('''        <button class="la-close" type="button">Close</button>
+''', '''        <div class="mb-person-tools">
+          <button class="bd-small mb-copy-person" type="button">Copy link</button>
+          <button class="bd-small mb-csv-person" type="button">Download CSV</button>
+          <button class="la-close" type="button">Close</button>
+        </div>
+''')
+rep('''      </dl>
+      <p>All years and days, whatever is picked above.</p>''', '''      </dl>
+      <div class="mb-profile" data-draw="p-extra"></div>
+      <p>All years and days, whatever is picked above.</p>''')
 rep('''      <button id="tab-checks" role="tab" data-tab="checks" aria-selected="false">Name checks</button>
 ''', '''      <button id="tab-checks" role="tab" data-tab="checks" aria-selected="false">Name checks</button>
       <button id="tab-builder" role="tab" data-tab="builder" aria-selected="false">Build a chart</button>
@@ -48,6 +75,143 @@ rep('''    <div class="la-filters">
         </div>
       </details>
 ''')
+# member-focused tabs (site only): recruits, results, milestones, attendance check
+rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" class="la-page" role="tabpanel" aria-labelledby="tab-recruits" hidden>
+    <div class="la-tiles" data-draw="rc-tiles"></div>
+    <div class="la-card" id="recruit-flow">
+      <h2>New recruits by month</h2>
+      <p>When each recruit first showed up, and where they are now. A recruit has joined once they are listed under a company. Recruits are counted by their first appearance, so the period picked above sets which ones are shown.</p>
+      <div class="la-legend" data-draw="rc-legend"></div>
+      <div class="la-chart la-short" data-draw="rc-chart"></div>
+    </div>
+    <div class="la-card" id="recruit-list">
+      <h2>Recruits</h2>
+      <p>Stopped attending means not seen in the 30 days before the latest event or drill on record.</p>
+      <div class="la-tablebox">
+        <table class="la-table">
+          <thead><tr><th>Name</th><th>First seen</th><th>Status</th><th>Joined</th><th class="la-n">Days to join</th><th class="la-n">Attended in first 30 days</th><th>Last seen</th></tr></thead>
+          <tbody data-draw="rc-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="results" class="la-page" role="tabpanel" aria-labelledby="tab-results" hidden>
+    <div class="la-tiles" data-draw="rs-tiles"></div>
+    <div class="la-grid">
+      <div class="la-card" id="win-by-size">
+        <h2>Win rate by attendance</h2>
+        <p>Events grouped by how many attended. Point at a bar to see how many events are in each group.</p>
+        <div class="la-chart la-short" data-draw="rs-bands"></div>
+      </div>
+      <div class="la-card" id="results-over-time">
+        <h2>Results over time</h2>
+        <p>Each event's attendance, colored by the result.</p>
+        <div class="la-legend" data-draw="rs-legend"></div>
+        <div class="la-chart la-short" data-draw="rs-dots"></div>
+      </div>
+    </div>
+    <div class="la-card" id="results-list">
+      <h2>Every result</h2>
+      <p>Scores come from the first line of each #attendance post, read as ours first.</p>
+      <div class="la-tablebox">
+        <table class="la-table">
+          <thead><tr><th>Date</th><th>Day</th><th>Score</th><th>Result</th><th class="la-n">Attendance</th></tr></thead>
+          <tbody data-draw="rs-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="milestones" class="la-page" role="tabpanel" aria-labelledby="tab-milestones" hidden>
+    <div class="la-grid">
+      <div class="la-card" id="milestones-next">
+        <h2>Coming up</h2>
+        <p>Members seen in the last 60 days who are close to their next milestone.</p>
+        <div class="la-tablebox">
+          <table class="la-table">
+            <thead><tr><th>Name</th><th>Company</th><th>Next milestone</th><th class="la-n">To go</th></tr></thead>
+            <tbody data-draw="ms-next"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="la-card" id="milestones-reached">
+        <h2>Milestones reached</h2>
+        <p>In the period picked above, newest first. Milestones are 10, 25, 50, 75, 100 and every 50 after that, for events and drills separately.</p>
+        <div class="la-tablebox">
+          <table class="la-table">
+            <thead><tr><th>Date</th><th>Name</th><th>Company</th><th>Milestone</th></tr></thead>
+            <tbody data-draw="ms-rows"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="check" class="la-page" role="tabpanel" aria-labelledby="tab-check" hidden>
+    <div class="la-card" id="check-form">
+      <h2>Attendance check</h2>
+      <p>Find who hasn't been showing up. Pick who to check and how far back to look. Your choices are saved in this browser.</p>
+      <div class="bd-form">
+        <label for="ab-scope">Who
+          <select id="ab-scope">
+            <option value="all">Whole regiment</option>
+            <option value="companies">Chosen companies</option>
+            <option value="people">Chosen people</option>
+          </select>
+        </label>
+        <label for="ab-window">Look back
+          <select id="ab-window">
+            <option value="7">1 week</option>
+            <option value="14">2 weeks</option>
+            <option value="21">3 weeks</option>
+            <option value="30">30 days</option>
+            <option value="60">60 days</option>
+            <option value="90">90 days</option>
+            <option value="custom">Number of days…</option>
+          </select>
+        </label>
+        <label for="ab-days" id="ab-days-wrap" hidden>Days
+          <input id="ab-days" type="number" min="1" max="730" value="45">
+        </label>
+        <label for="ab-kind">Count
+          <select id="ab-kind">
+            <option value="any">Events and drills</option>
+            <option value="event">Events only</option>
+            <option value="drill">Drills only</option>
+          </select>
+        </label>
+        <label for="ab-min">Flag if attended fewer than
+          <input id="ab-min" type="number" min="1" max="50" value="1">
+        </label>
+        <label for="ab-asof">Up to
+          <input id="ab-asof" type="date">
+        </label>
+      </div>
+      <div class="mb-checks" id="ab-companies" hidden></div>
+      <div class="mb-people" id="ab-people" hidden>
+        <div class="mb-people-add">
+          <input id="ab-person" list="all-members" placeholder="Type a name" aria-label="Add a person" autocomplete="off">
+          <button type="button" class="bd-small" id="ab-add">Add</button>
+        </div>
+        <div class="mb-chips"></div>
+      </div>
+      <label class="mb-inline" for="ab-recent"><input type="checkbox" id="ab-recent" checked> Leave out people who hadn't attended in the 6 months before the check</label>
+    </div>
+    <div class="la-card" id="check-results">
+      <h2>Who's missing</h2>
+      <p class="mb-summary" data-draw="ab-summary"></p>
+      <div class="la-tablebox">
+        <table class="la-table">
+          <thead><tr><th>Status</th><th>Name</th><th>Company</th><th class="la-n">Attended</th><th>Last event</th><th>Last drill</th><th class="la-n">Days since seen</th></tr></thead>
+          <tbody data-draw="ab-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="checks" class="la-page"''')
+
 # custom charts on the Regiment tab, after the built-in ones
 rep('''  </section>
 
@@ -149,6 +313,7 @@ head = '''<!doctype html>
 '''
 foot = '''
 <script src="builder.js"></script>
+<script src="members.js"></script>
 <footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
 </main>
 </body>

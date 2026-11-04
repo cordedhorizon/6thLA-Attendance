@@ -28,6 +28,7 @@ rep('''  </header>
       <input id="find-member" type="search" list="all-members" placeholder="Find a member" aria-label="Find a member" autocomplete="off">
       <datalist id="all-members"></datalist>
       <p class="mb-asof" data-draw="mb-asof"></p>
+      <p class="mb-asof">Site updated __BUILD__</p>
     </div>
   </header>
 ''')
@@ -182,9 +183,6 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
             <option value="event">Events only</option>
             <option value="drill">Drills only</option>
           </select>
-        </label>
-        <label for="ab-min">Flag if attended fewer than
-          <input id="ab-min" type="number" min="1" max="50" value="1">
         </label>
         <label for="ab-asof">Up to (blank means latest on record)
           <input id="ab-asof" type="date">
@@ -408,4 +406,6 @@ for f in ['site.css', 'd3.min.js', 'dash-shim.js', 'builder.js', 'members.js', '
     v = hashlib.sha1(open(os.path.join(root, f), 'rb').read()).hexdigest()[:8]
     for attr in ('href', 'src'):
         out = out.replace(f'{attr}="{f}"', f'{attr}="{f}?v={v}"')
+import datetime
+out = out.replace('__BUILD__', datetime.datetime.now(datetime.timezone.utc).strftime('%b %-d, %Y, %H:%M UTC'))
 open(sys.argv[2], 'w').write(out)

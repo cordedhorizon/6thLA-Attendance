@@ -393,7 +393,7 @@
   const STORE_CHECK = 'la-check';
   const f = {
     scope: document.getElementById('ab-scope'), window: document.getElementById('ab-window'), days: document.getElementById('ab-days'),
-    daysWrap: document.getElementById('ab-days-wrap'), kind: document.getElementById('ab-kind'), min: document.getElementById('ab-min'),
+    daysWrap: document.getElementById('ab-days-wrap'), kind: document.getElementById('ab-kind'),
     asof: document.getElementById('ab-asof'), companies: document.getElementById('ab-companies'), people: document.getElementById('ab-people'),
     person: document.getElementById('ab-person'), add: document.getElementById('ab-add'), recent: document.getElementById('ab-recent'),
   };
@@ -402,7 +402,7 @@
   function writeCheck() {
     if (!f.scope) return;
     f.scope.value = check.scope; f.window.value = check.window; f.days.value = check.days; f.kind.value = check.kind;
-    f.min.value = check.min; f.asof.value = check.asof; f.recent.checked = check.recent;
+    f.asof.value = check.asof; f.recent.checked = check.recent;
     f.daysWrap.hidden = check.window !== 'custom';
     f.companies.hidden = check.scope !== 'companies';
     f.people.hidden = check.scope !== 'people';
@@ -429,7 +429,6 @@
     f.window.addEventListener('change', () => { check.window = f.window.value; writeCheck(); saveCheck(); });
     f.days.addEventListener('change', () => { check.days = num(f.days, 1, 730, 45); saveCheck(); });
     f.kind.addEventListener('change', () => { check.kind = f.kind.value; saveCheck(); });
-    f.min.addEventListener('change', () => { check.min = num(f.min, 1, 50, 1); saveCheck(); });
     f.asof.addEventListener('change', () => { if (f.asof.value && !f.asof.validity.valid) return; check.asof = f.asof.value; saveCheck(); });
     f.recent.addEventListener('change', () => { check.recent = f.recent.checked; saveCheck(); });
     const addPerson = () => {
@@ -487,8 +486,8 @@
       const last = before[before.length - 1].date;
       out.push({ name: g.name, company, n: inWin, lastEvent: lastOf('event'), lastDrill: lastOf('drill'), since: daysBetween(last, to) });
     }
-    out.sort((a, c) => (a.n >= check.min) - (c.n >= check.min) || a.n - c.n || c.since - a.since || a.name.localeCompare(c.name));
-    return { from, to, held, out, skipped, flagged: out.filter((x) => x.n < check.min).length };
+    out.sort((a, c) => (a.n > 0) - (c.n > 0) || c.since - a.since || a.name.localeCompare(c.name));
+    return { from, to, held, out, skipped, flagged: out.filter((x) => x.n === 0).length };
   }
   dash.draw('ab-summary', (el) => {
     const r = runCheck();
@@ -501,7 +500,7 @@
     }
     const span = `between ${dayName(r.from)} and ${dayName(r.to)}`;
     const held = `${plural(r.held, w1, wn)} ${r.held === 1 ? 'was' : 'were'} held ${span}`;
-    const who = `${fmt(r.flagged)} of ${plural(r.out.length, 'person', 'people')} attended fewer than ${plural(check.min, w1, wn)}`;
+    const who = `${fmt(r.flagged)} of ${plural(r.out.length, 'person', 'people')} did not attend any of them`;
     el.textContent = `${held}. ${who}.` + (r.skipped ? ` ${plural(r.skipped, 'person', 'people')} who hadn't attended in the 6 months before were left out.` : '');
   });
   dash.draw('ab-key', (el) => {
@@ -510,10 +509,9 @@
     if (!r) return;
     const [w1, wn] = kindWord[check.kind];
     const items = [
-      ['Missed all', 'bad', `didn't attend any of the ${plural(r.held, w1, wn)} held in the look-back period.`],
-      ['Below minimum', 'warn', `attended some, but fewer than ${plural(check.min, w1, wn)}.`],
-      ['Met minimum', 'ok', `attended at least ${plural(check.min, w1, wn)}.`],
-    ].filter(([s]) => !(check.min === 1 && s === 'Below minimum'));
+      ['Did not attend', 'bad', `wasn't at any of the ${plural(r.held, w1, wn)} held in the look-back period.`],
+      ['Attended', 'ok', `was at one or more of them. The Attended column shows how many.`],
+    ];
     for (const [s, tone, text] of items) {
       const li = document.createElement('li');
       const p = document.createElement('span');
@@ -529,7 +527,7 @@
     if (!r) return;
     for (const x of r.out) {
       const tr = document.createElement('tr');
-      if (x.n === 0) pill(tr, 'Missed all', 'bad'); else if (x.n < check.min) pill(tr, 'Below minimum', 'warn'); else pill(tr, 'Met minimum', 'ok');
+      if (x.n === 0) pill(tr, 'Did not attend', 'bad'); else pill(tr, 'Attended', 'ok');
       nameButton(tr, x.name); td(tr, x.company); td(tr, fmt(x.n), 'la-n');
       td(tr, x.lastEvent ? dayName(x.lastEvent) : '—'); td(tr, x.lastDrill ? dayName(x.lastDrill) : '—'); td(tr, fmt(x.since), 'la-n');
       tb.append(tr);

@@ -93,6 +93,7 @@
       <input id="find-member" type="search" list="all-members" placeholder="Find a member" aria-label="Find a member" autocomplete="off">
       <datalist id="all-members"></datalist>
       <p class="mb-asof" data-draw="mb-asof"></p>
+      <p class="mb-asof">Site updated Nov 4, 2026, 16:18 UTC</p>
     </div>
   </header>
 
@@ -410,9 +411,6 @@
             <option value="event">Events only</option>
             <option value="drill">Drills only</option>
           </select>
-        </label>
-        <label for="ab-min">Flag if attended fewer than
-          <input id="ab-min" type="number" min="1" max="50" value="1">
         </label>
         <label for="ab-asof">Up to (blank means latest on record)
           <input id="ab-asof" type="date">
@@ -1444,7 +1442,7 @@ dash.draw('multi-rows', (tb) => {
 </script>
 
 <script src="builder.js?v=8704e933"></script>
-<script src="members.js?v=4dda2df5"></script>
+<script src="members.js?v=3e682971"></script>
 <script src="more.js?v=f63c7b84"></script>
 <footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
 </main>

@@ -601,12 +601,12 @@
   });
 
   // ---------- which top controls make sense on each tab ----------
-  const NO_KINDS = ['people', 'checks', 'recruits', 'results', 'check'];
+  const NO_KINDS = ['people', 'checks', 'recruits', 'results', 'check', 'promotions'];
   function fitControls(name) {
     for (const k of document.querySelectorAll('.la-kinds')) k.hidden = NO_KINDS.includes(name) && name !== 'milestones';
     // The check uses its own dates, so the period and filters don't apply there.
     for (const fl of document.querySelectorAll('.la-filters')) fl.hidden = name === 'check';
-    for (const d of document.querySelectorAll('.la-day')) d.hidden = name === 'recruits' || name === 'milestones';
+    for (const d of document.querySelectorAll('.la-day')) d.hidden = name === 'recruits' || name === 'milestones' || name === 'promotions';
   }
   const prevShowTab = window.showTab;
   window.showTab = function (name, link) { prevShowTab(name, link); fitControls(name); };

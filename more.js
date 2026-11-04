@@ -119,7 +119,7 @@
     new MutationObserver(() => applySort(table)).observe(table.tBodies[0], { childList: true });
   }
   document.addEventListener('DOMContentLoaded', () => {
-    for (const t of document.querySelectorAll('#recruits table, #results table, #milestones table, #check table, #company-card table')) makeSortable(t);
+    for (const t of document.querySelectorAll('#recruits table:not(.mb-retention), #results table, #milestones table, #promotions table, #check table, #company-card table')) makeSortable(t);
   });
 
   // ---------- data as of ----------
@@ -458,6 +458,219 @@
   }
   dash.onData(() => requestAnimationFrame(linkCompanies));
   for (const tb of document.querySelectorAll('[data-draw="people-rows"]')) new MutationObserver(linkCompanies).observe(tb, { childList: true });
+
+  // ---------- promotions and time in rank ----------
+  // An earliest rank that isn't a recruit started before our records, or before we first saw them.
+  const unsureStart = (g, i) => i === 0 && !/^rct/i.test(g.ranks[0].rank);
+  function promotions() {
+    const b = all();
+    if (!b) return null;
+    const out = [];
+    for (const g of b.people.values()) {
+      for (let i = 1; i < g.ranks.length; i += 1) {
+        const prev = g.ranks[i - 1], cur = g.ranks[i];
+        const company = g.rows.find((r) => r.date >= cur.date)?.company ?? g.company;
+        const attended = g.rows.filter((r) => r.date >= prev.date && r.date < cur.date).length;
+        out.push({ date: cur.date, name: g.name, to: cur.rank, from: prev.rank, company, days: daysBetween(prev.date, cur.date), atLeast: unsureStart(g, i - 1), attended, recruit: /^rct/i.test(prev.rank) });
+      }
+    }
+    return out.sort((a, z) => z.date.localeCompare(a.date) || a.name.localeCompare(z.name));
+  }
+  const atLeast = (n, sure) => (sure ? fmt(n) : `at least ${fmt(n)}`);
+  function numCell(tr, n, sure) { const c = td(tr, atLeast(n, sure), 'la-n'); c.dataset.v = n; return c; }
+  dash.draw('pr-tiles', (box) => {
+    const all_ = promotions();
+    const r = (all_ ?? []).filter((x) => L.inPeriod(x.date) && !x.recruit);
+    const sure = r.filter((x) => !x.atLeast).map((x) => x.days);
+    const pairs = d3.rollups(r, (v) => v.length, (x) => `${x.from} to ${x.to}`).sort((a, z) => z[1] - a[1]);
+    tiles(box, [
+      ['Promotions', fmt(r.length), 'In the period picked, not counting recruits joining'],
+      ['People promoted', fmt(new Set(r.map((x) => x.name)).size), ''],
+      ['Typical time between ranks', sure.length ? `${fmt(Math.round(d3.median(sure)))} days` : '—', 'Median, where both dates are on record'],
+      ['Most common', pairs.length ? pairs[0][0] : '—', pairs.length ? plural(pairs[0][1], 'time', 'times') : ''],
+    ]);
+  });
+  dash.draw('pr-rows', (tb) => {
+    tb.replaceChildren();
+    const r = promotions();
+    if (!r) return;
+    const list = r.filter((x) => L.inPeriod(x.date));
+    if (!list.length) return emptyRow(tb, 8, 'No rank changes in this period.');
+    for (const x of list) {
+      const tr = el('tr');
+      td(tr, dayName(x.date)); nameButton(tr, x.name);
+      const c1 = td(tr, x.to); c1.dataset.v = L.rankOrder(x.to);
+      const c2 = td(tr, x.from); c2.dataset.v = L.rankOrder(x.from);
+      L.coCell(tr, x.company); numCell(tr, x.days, !x.atLeast); numCell(tr, x.attended, !x.atLeast);
+      tb.append(tr);
+    }
+  });
+  const trRank = document.getElementById('tr-rank');
+  trRank?.addEventListener('change', () => dash.draw('tr-rows'));
+  dash.draw('tr-rows', (tb) => {
+    tb.replaceChildren();
+    const b = all();
+    if (!b) return;
+    const since60 = addDays(b.latest, -60);
+    const list = [];
+    for (const g of b.people.values()) {
+      if (g.last < since60 || !g.ranks.length) continue;
+      const i = g.ranks.length - 1, cur = g.ranks[i];
+      const after = g.rows.filter((r) => r.date >= cur.date);
+      list.push({ name: g.name, rank: cur.rank, company: g.company, since: cur.date, days: daysBetween(cur.date, b.latest), sure: !unsureStart(g, i), events: after.filter((r) => r.kind === 'event').length, drills: after.filter((r) => r.kind === 'drill').length });
+    }
+    if (trRank) {
+      const want = trRank.value;
+      const ranks = [...new Set(list.map((x) => x.rank))].sort((a, z) => L.rankOrder(z) - L.rankOrder(a));
+      if (trRank.options.length !== ranks.length + 1) { trRank.replaceChildren(new Option('All ranks', ''), ...ranks.map((k) => new Option(k, k))); trRank.value = want; }
+    }
+    const shown = list.filter((x) => !trRank?.value || x.rank === trRank.value).sort((a, z) => z.events + z.drills - (a.events + a.drills) || a.name.localeCompare(z.name));
+    if (!shown.length) return emptyRow(tb, 7, 'Nobody at this rank seen in the last 60 days.');
+    for (const x of shown) {
+      const tr = el('tr');
+      nameButton(tr, x.name); L.coCell(tr, x.company);
+      td(tr, x.sure ? dayName(x.since) : `${dayName(x.since)} or earlier`);
+      numCell(tr, x.days, x.sure); numCell(tr, x.events, x.sure); numCell(tr, x.drills, x.sure);
+      tb.append(tr);
+    }
+  });
+
+  // ---------- retention: do new people keep coming? ----------
+  const rt = { from: document.getElementById('rt-from'), to: document.getElementById('rt-to'), group: document.getElementById('rt-group'), points: document.getElementById('rt-points') };
+  let rtState = { from: '', to: '', group: 'month', points: [30, 90, 180], ...L.load('la-retention', {}) };
+  const parsePoints = (s) => [...new Set(String(s).split(/[^0-9]+/).map(Number).filter((n) => n >= 7 && n <= 1095))].sort((a, z) => a - z).slice(0, 6);
+  function writeRt() {
+    if (!rt.from) return;
+    rt.from.value = rtState.from; rt.to.value = rtState.to; rt.group.value = rtState.group; rt.points.value = rtState.points.join(', ');
+  }
+  function saveRt() { L.save('la-retention', rtState); for (const n of ['rt-legend', 'rt-chart', 'rt-head', 'rt-rows']) dash.draw(n); }
+  if (rt.from) {
+    for (const k of ['from', 'to']) rt[k].addEventListener('change', () => { if (rt[k].value && !rt[k].validity.valid) return; rtState[k] = rt[k].value; saveRt(); });
+    rt.group.addEventListener('change', () => { rtState.group = rt.group.value; saveRt(); });
+    rt.points.addEventListener('change', () => { const p = parsePoints(rt.points.value); if (p.length) rtState.points = p; writeRt(); saveRt(); });
+    writeRt();
+  }
+  const cohortKey = (d) => (rtState.group === 'year' ? d.slice(0, 4) : rtState.group === 'quarter' ? `${d.slice(0, 4)}-Q${Math.floor((+d.slice(5, 7) - 1) / 3) + 1}` : d.slice(0, 7));
+  const cohortLabel = (k) => (rtState.group === 'month' ? monthName(monthParse(k)) : k.replace('-', ' '));
+  function retention() {
+    const b = all();
+    if (!b) return null;
+    const start = b.data[0].date;
+    const groups = new Map();
+    for (const g of b.people.values()) {
+      if (daysBetween(start, g.first) <= 30) continue;
+      if (rtState.from && g.first < rtState.from) continue;
+      if (rtState.to && g.first > rtState.to) continue;
+      const k = cohortKey(g.first);
+      if (!groups.has(k)) groups.set(k, { key: k, n: 0, hit: rtState.points.map(() => 0), known: rtState.points.map(() => 0) });
+      const c = groups.get(k);
+      c.n += 1;
+      rtState.points.forEach((N, i) => {
+        const lo = addDays(g.first, N - 29), hi = addDays(g.first, N);
+        if (hi > b.latest) return;
+        c.known[i] += 1;
+        if (g.rows.some((r) => r.date >= lo && r.date <= hi)) c.hit[i] += 1;
+      });
+    }
+    return [...groups.values()].sort((a, z) => a.key.localeCompare(z.key));
+  }
+  const rtColors = () => rtState.points.map((_, i) => dash.colors[i % dash.colors.length]);
+  dash.draw('rt-legend', (box) => legend(box, rtState.points.map((N, i) => [`After ${N} days`, rtColors()[i]])));
+  dash.draw('rt-chart', (box) => {
+    box.replaceChildren();
+    const r = retention();
+    box.classList.toggle('dash-skeleton', !r);
+    if (!r || !r.length) return;
+    const keys = r.map((c) => c.key);
+    const series = rtState.points.map((N, i) => ({ name: `After ${N} days`, color: rtColors()[i], values: new Map(r.filter((c) => c.known[i]).map((c) => [c.key, Math.round(c.hit[i] / c.known[i] * 100)])) }));
+    lineChart(box, keys, series, {
+      height: 200, yMax: 100, valueFmt: (v) => v + '%', dots: true, connect: true,
+      ...(rtState.group === 'month' ? {} : { catLabel: (k) => k.replace('-', ' '), tipTitle: cohortLabel }),
+      csvLabel: 'First attended',
+      extra: (k) => { const c = r.find((x) => x.key === k); return c ? [{ text: plural(c.n, 'new person', 'new people') }] : []; },
+    });
+  });
+  dash.draw('rt-head', (tr) => {
+    tr.replaceChildren(el('th', null, 'First attended'), el('th', 'la-n', 'New people'), ...rtState.points.map((N) => el('th', 'la-n', `After ${N} days`)));
+  });
+  dash.draw('rt-rows', (tb) => {
+    tb.replaceChildren();
+    const r = retention();
+    if (!r) return;
+    if (!r.length) return emptyRow(tb, 2 + rtState.points.length, 'Nobody first attended between these dates.');
+    for (const c of [...r].reverse()) {
+      const tr = el('tr');
+      td(tr, cohortLabel(c.key)); td(tr, fmt(c.n), 'la-n');
+      rtState.points.forEach((_, i) => td(tr, c.known[i] ? `${pct(c.hit[i] / c.known[i])} (${c.hit[i]} of ${c.known[i]})` : '—', 'la-n'));
+      tb.append(tr);
+    }
+  });
+
+  // ---------- calendar heatmap ----------
+  dash.draw('cal-key', (box) => {
+    box.replaceChildren();
+    const s = el('span', 'mb-cal-scale');
+    s.append('Fewer');
+    for (const o of [0.15, 0.35, 0.55, 0.75, 1]) { const i = el('i'); i.style.background = 'var(--series-1)'; i.style.opacity = o; s.append(i); }
+    s.append('More');
+    const none = el('span');
+    const ni = el('i'); ni.style.background = 'var(--cds-chart-grid)';
+    none.append(ni, 'No event or drill');
+    box.append(s, none);
+  });
+  dash.draw('cal', (box) => {
+    box.replaceChildren();
+    const rs = rows('attendance');
+    box.classList.toggle('dash-skeleton', !rs);
+    if (!rs) return;
+    const p = P();
+    const kinds = shownKinds();
+    const posts = new Map();
+    for (const r of rs) {
+      if (!kinds.includes(r.kind) || (p.year !== 'all' && !r.date.startsWith(p.year)) || (p.day !== 'all' && dayOf(r.date) !== p.day)) continue;
+      if (!posts.has(r.post)) posts.set(r.post, { post: r.post, date: r.date, kind: r.kind, n: 0 });
+      posts.get(r.post).n += 1;
+    }
+    const byDay = d3.group([...posts.values()], (x) => x.date);
+    if (!byDay.size) { box.append(el('div', 'la-failed', 'Nothing in this period.')); return; }
+    const max = d3.max([...posts.values()], (x) => x.n) || 1;
+    box._csv = { head: ['Date', 'Day', 'Type', 'Attendance'], rows: [...posts.values()].sort((a, z) => a.date.localeCompare(z.date)).map((x) => [x.date, dayOf(x.date), x.kind === 'event' ? 'Event' : 'Drill', x.n]) };
+    const dates = [...byDay.keys()].sort();
+    const years = d3.range(+dates[dates.length - 1].slice(0, 4), +dates[0].slice(0, 4) - 1, -1);
+    const span = [all()?.data[0]?.date ?? dates[0], all()?.latest ?? dates[dates.length - 1]];
+    const scroll = el('div', 'mb-cal-scroll');
+    box.append(scroll);
+    const tip = makeTip(box);
+    const C = 12, G = 2, L0 = 30, T0 = 16;
+    for (const y of years) {
+      const y0 = new Date(Date.UTC(y, 0, 1)), y1 = new Date(Date.UTC(y + 1, 0, 1));
+      const weeks = d3.utcSunday.count(d3.utcSunday.floor(y0), y1) + 1;
+      const W = L0 + weeks * (C + G), H = T0 + 7 * (C + G);
+      const wrap = el('div', 'mb-cal-year');
+      wrap.append(el('h4', 'mb-h4', String(y)));
+      const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H).attr('class', 'la-svg');
+      for (const [i, d] of [[1, 'Mon'], [3, 'Wed'], [5, 'Fri']]) svg.append('text').attr('x', 0).attr('y', T0 + i * (C + G) + C - 2).text(d);
+      for (const m of d3.utcMonths(y0, y1)) svg.append('text').attr('x', L0 + d3.utcSunday.count(y0, m) * (C + G)).attr('y', 10).text(d3.utcFormat('%b')(m));
+      for (const d of d3.utcDays(y0, y1)) {
+        const key = iso(d);
+        if (key < span[0] || key > span[1]) continue; // outside our records
+        const list = byDay.get(key);
+        const x = L0 + d3.utcSunday.count(d3.utcSunday.floor(y0), d) * (C + G) - (d3.utcSunday.floor(y0) < y0 ? 0 : 0);
+        const rect = svg.append('rect').attr('x', x).attr('y', T0 + d.getUTCDay() * (C + G)).attr('width', C).attr('height', C).attr('rx', 2);
+        if (!list) { rect.style('fill', 'var(--cds-chart-grid)'); continue; }
+        const top = d3.greatest(list, (z) => z.n);
+        rect.style('fill', 'var(--series-1)').attr('fill-opacity', 0.15 + 0.85 * (top.n / max)).style('cursor', 'pointer');
+        const node = rect.node();
+        node.addEventListener('pointerenter', () => {
+          const br = box.getBoundingClientRect(), rr = node.getBoundingClientRect();
+          tip(rr.left - br.left + C / 2, rr.top - br.top, `${dayOf(key)} ${dayName(key)}`, list.map((z) => ({ text: `${z.kind === 'event' ? 'Event' : 'Drill'}: ${fmt(z.n)} attended` })).concat([{ text: 'Click to see who was there' }]));
+        });
+        node.addEventListener('pointerleave', () => tip());
+        node.addEventListener('click', () => window.laShowPost(top.post));
+      }
+      scroll.append(wrap);
+    }
+  });
 
   // ---------- top controls on the new tab ----------
   const prevShowTab = window.showTab;

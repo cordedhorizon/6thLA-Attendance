@@ -13,12 +13,13 @@ def rep(old, new):
     page = page.replace(old, new)
 
 rep("const tabs = ['regiment', 'companies', 'people', 'checks'];",
-    "const tabs = ['regiment', 'companies', 'people', 'recruits', 'results', 'milestones', 'check', 'compare', 'checks', 'builder'];")
+    "const tabs = ['regiment', 'companies', 'people', 'recruits', 'results', 'milestones', 'promotions', 'check', 'compare', 'checks', 'builder'];")
 rep('''      <button id="tab-people" role="tab" data-tab="people" aria-selected="false">People</button>
 ''', '''      <button id="tab-people" role="tab" data-tab="people" aria-selected="false">People</button>
       <button id="tab-recruits" role="tab" data-tab="recruits" aria-selected="false">Recruits</button>
       <button id="tab-results" role="tab" data-tab="results" aria-selected="false">Results</button>
       <button id="tab-milestones" role="tab" data-tab="milestones" aria-selected="false">Milestones</button>
+      <button id="tab-promotions" role="tab" data-tab="promotions" aria-selected="false">Promotions</button>
       <button id="tab-check" role="tab" data-tab="check" aria-selected="false">Attendance check</button>
       <button id="tab-compare" role="tab" data-tab="compare" aria-selected="false">Compare</button>
 ''')
@@ -97,6 +98,28 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
         </table>
       </div>
     </div>
+    <div class="la-card" id="retention">
+      <h2>Do new people keep coming?</h2>
+      <p>Everyone grouped by when they first attended. At each check-point, the share who attended at least once in the 30 days leading up to it. A dash means that group hasn't reached the check-point yet. People already attending when records begin are left out. This card uses its own dates below, not the period picked above, and remembers them in this browser.</p>
+      <div class="bd-form">
+        <label for="rt-from">First attended from <input id="rt-from" type="date"></label>
+        <label for="rt-to">to <input id="rt-to" type="date"></label>
+        <label for="rt-group">Group by
+          <select id="rt-group"><option value="month">Month</option><option value="quarter">Quarter</option><option value="year">Year</option></select>
+        </label>
+        <label for="rt-points">Check after (days)
+          <input id="rt-points" type="text" inputmode="numeric" value="30, 90, 180" placeholder="30, 90, 180">
+        </label>
+      </div>
+      <div class="la-legend" data-draw="rt-legend"></div>
+      <div class="la-chart la-short" data-draw="rt-chart"></div>
+      <div class="la-tablebox">
+        <table class="la-table mb-retention">
+          <thead><tr data-draw="rt-head"></tr></thead>
+          <tbody data-draw="rt-rows"></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <section id="results" class="la-page" role="tabpanel" aria-labelledby="tab-results" hidden>
@@ -121,6 +144,33 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
         <table class="la-table">
           <thead><tr><th>Date</th><th>Day</th><th>Score</th><th>Result</th><th class="la-n">Attendance</th></tr></thead>
           <tbody data-draw="rs-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="promotions" class="la-page" role="tabpanel" aria-labelledby="tab-promotions" hidden>
+    <div class="la-tiles" data-draw="pr-tiles"></div>
+    <div class="la-card" id="promotions-log">
+      <h2>Promotions</h2>
+      <p>Every rank change in the period picked above, newest first. A promotion is dated by the first post that lists the new rank. "At least" means the earlier rank started before our records do.</p>
+      <div class="la-tablebox">
+        <table class="la-table">
+          <thead><tr><th>Date</th><th>Rank</th><th>Name</th><th>Promoted to</th><th>From</th><th>Company</th><th class="la-n">Days in previous rank</th><th class="la-n">Attended in previous rank</th></tr></thead>
+          <tbody data-draw="pr-rows"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="la-card" id="time-in-rank">
+      <h2>Time in rank</h2>
+      <p>Members seen in the last 60 days: how long they have held their current rank, and how many events and drills they have attended since. Useful for spotting who may be ready for promotion. "At least" means the rank started before our records do.</p>
+      <div class="la-tools">
+        <select id="tr-rank" class="mb-select" aria-label="Rank"><option value="">All ranks</option></select>
+      </div>
+      <div class="la-tablebox">
+        <table class="la-table">
+          <thead><tr><th>Rank</th><th>Name</th><th>Company</th><th>Rank since</th><th class="la-n">Days in rank</th><th class="la-n">Events since</th><th class="la-n">Drills since</th></tr></thead>
+          <tbody data-draw="tr-rows"></tbody>
         </table>
       </div>
     </div>
@@ -294,7 +344,13 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="compare" cla
 # custom charts on the Regiment tab, after the built-in ones
 rep('''  </section>
 
-  <section id="companies" class="la-page"''', '''    <div class="bd-saved-section" hidden>
+  <section id="companies" class="la-page"''', '''    <div class="la-card" id="calendar">
+      <h2>Attendance by day</h2>
+      <p>Each square is a day, darker when more people attended. Days with no event or drill are left pale, and days outside our records are left out. Point at a day for details, or click it to see who was there. Follows the period, day and type picked above.</p>
+      <div class="la-chart mb-cal" data-draw="cal"></div>
+      <div class="la-legend mb-cal-key" data-draw="cal-key"></div>
+    </div>
+    <div class="bd-saved-section" hidden>
       <h2 class="bd-section-title">Your charts</h2>
       <div class="la-grid" data-draw="bd-saved"></div>
     </div>

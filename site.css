@@ -170,3 +170,13 @@ tr[data-post] { cursor: pointer; }
 .mb-more summary::-webkit-details-marker { display: none; }
 .mb-more { margin-top: 1px; }
 .mb-more summary:focus-visible { outline: 2px solid var(--color-fg-muted); outline-offset: 1px; }
+/* calendar heatmap */
+.la-chart.mb-cal { min-height: 0; }
+.mb-cal-scroll { display: flex; flex-direction: column; gap: var(--cds-gap-sm); overflow-x: auto; padding-bottom: 4px; }
+.mb-cal-year { width: max-content; }
+.mb-cal-year h4 { margin: 0 0 2px; }
+.mb-cal-year svg text { font-size: 10px; fill: var(--color-fg-muted); }
+.mb-cal-scale { display: inline-flex; align-items: center; gap: 3px; }
+.mb-cal-key i { width: 11px; height: 11px; border-radius: 2px; }
+.mb-select { font: inherit; font-size: var(--cds-font-size-caption); padding: var(--cds-pad-xs) var(--cds-pad-sm); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); background: var(--color-panel); color: var(--color-fg); }
+.mb-retention td, .mb-retention th { white-space: nowrap; }

@@ -80,13 +80,13 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
     <div class="la-tiles" data-draw="rc-tiles"></div>
     <div class="la-card" id="recruit-flow">
       <h2>New recruits by month</h2>
-      <p>When each recruit first showed up, and where they are now. A recruit has joined once they are listed under a company. Recruits are counted by their first appearance, so the period picked above sets which ones are shown.</p>
+      <p>When each recruit first showed up, and whether they have since chosen a company. Recruits are counted by their first appearance, so the period picked above sets which ones are shown.</p>
       <div class="la-legend" data-draw="rc-legend"></div>
       <div class="la-chart la-short" data-draw="rc-chart"></div>
     </div>
     <div class="la-card" id="recruit-list">
       <h2>Recruits</h2>
-      <p>Stopped attending means not seen in the 30 days before the latest event or drill on record.</p>
+      <p>Someone stays a recruit until they choose a company and are listed under it.</p>
       <div class="la-tablebox">
         <table class="la-table">
           <thead><tr><th>Name</th><th>First seen</th><th>Status</th><th>Joined</th><th class="la-n">Days to join</th><th class="la-n">Attended in first 30 days</th><th>Last seen</th></tr></thead>
@@ -184,7 +184,7 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
         <label for="ab-min">Flag if attended fewer than
           <input id="ab-min" type="number" min="1" max="50" value="1">
         </label>
-        <label for="ab-asof">Up to
+        <label for="ab-asof">Up to (blank means latest on record)
           <input id="ab-asof" type="date">
         </label>
       </div>
@@ -201,6 +201,7 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
     <div class="la-card" id="check-results">
       <h2>Who's missing</h2>
       <p class="mb-summary" data-draw="ab-summary"></p>
+      <ul class="mb-key" data-draw="ab-key" aria-label="What the statuses mean"></ul>
       <div class="la-tablebox">
         <table class="la-table">
           <thead><tr><th>Status</th><th>Name</th><th>Company</th><th class="la-n">Attended</th><th>Last event</th><th>Last drill</th><th class="la-n">Days since seen</th></tr></thead>

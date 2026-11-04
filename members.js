@@ -277,22 +277,22 @@
       if (g.rows[0].company !== 'Recruits') continue;
       const joinRow = g.rows.find((r) => r.company !== 'Recruits');
       const first30 = g.rows.filter((r) => r.date <= addDays(g.first, 29)).length;
-      const status = joinRow ? 'Joined' : g.last >= addDays(b.latest, -30) ? 'Still a recruit' : 'Stopped attending';
-      out.push({ name: g.name, first: g.first, last: g.last, status, joined: joinRow?.company ?? null, joinDate: joinRow?.date ?? null, days: joinRow ? daysBetween(g.first, joinRow.date) : null, first30 });
+      const status = joinRow ? 'Joined a company' : 'Still a recruit';
+      const quiet = !joinRow && g.last < addDays(b.latest, -30);
+      out.push({ name: g.name, first: g.first, last: g.last, status, quiet, joined: joinRow?.company ?? null, joinDate: joinRow?.date ?? null, days: joinRow ? daysBetween(g.first, joinRow.date) : null, first30 });
     }
     return out.filter((x) => inPeriod(x.first)).sort((a, c) => c.first.localeCompare(a.first) || a.name.localeCompare(c.name));
   }
-  const STATUS = [['Joined', () => dash.colors[2], 'ok'], ['Still a recruit', () => dash.colors[0], 'warn'], ['Stopped attending', () => 'var(--cds-chart-muted)', 'bad']];
+  const STATUS = [['Joined a company', () => dash.colors[2], 'ok'], ['Still a recruit', () => dash.colors[0], 'warn']];
   dash.draw('rc-tiles', (el) => {
     const r = recruits() ?? [];
     const n = (s) => r.filter((x) => x.status === s).length;
     const days = r.filter((x) => x.days != null).map((x) => x.days);
     tiles(el, [
       ['New recruits', fmt(r.length), 'First seen in this period'],
-      ['Joined a company', fmt(n('Joined')), r.length ? pct(n('Joined') / r.length) + ' of recruits' : ''],
+      ['Joined a company', fmt(n('Joined a company')), r.length ? pct(n('Joined a company') / r.length) + ' of recruits' : ''],
       ['Typical days to join', days.length ? fmt(Math.round(d3.median(days))) : '—', 'Median'],
-      ['Still a recruit', fmt(n('Still a recruit')), ''],
-      ['Stopped attending', fmt(n('Stopped attending')), r.length ? pct(n('Stopped attending') / r.length) + ' of recruits' : ''],
+      ['Still a recruit', fmt(n('Still a recruit')), (() => { const q = r.filter((x) => x.quiet).length; return q ? `${fmt(q)} not seen in the last 30 days` : 'All seen in the last 30 days'; })()],
     ]);
   });
   dash.draw('rc-legend', (el) => legend(el, STATUS.map(([s, c]) => [s, c()])));
@@ -395,7 +395,7 @@
     person: document.getElementById('ab-person'), add: document.getElementById('ab-add'), recent: document.getElementById('ab-recent'),
   };
   let check = { scope: 'all', window: '30', days: 45, kind: 'any', min: 1, asof: '', companies: [], people: [], recent: true, ...load(STORE_CHECK, {}) };
-  function saveCheck() { save(STORE_CHECK, check); dash.draw('ab-summary'); dash.draw('ab-rows'); }
+  function saveCheck() { save(STORE_CHECK, check); dash.draw('ab-summary'); dash.draw('ab-key'); dash.draw('ab-rows'); }
   function writeCheck() {
     if (!f.scope) return;
     f.scope.value = check.scope; f.window.value = check.window; f.days.value = check.days; f.kind.value = check.kind;
@@ -501,13 +501,32 @@
     const who = `${fmt(r.flagged)} of ${plural(r.out.length, 'person', 'people')} attended fewer than ${plural(check.min, w1, wn)}`;
     el.textContent = `${held}. ${who}.` + (r.skipped ? ` ${plural(r.skipped, 'person', 'people')} who hadn't attended in the 6 months before were left out.` : '');
   });
+  dash.draw('ab-key', (el) => {
+    const r = runCheck();
+    el.replaceChildren();
+    if (!r) return;
+    const [w1, wn] = kindWord[check.kind];
+    const items = [
+      ['Missed all', 'bad', `didn't attend any of the ${plural(r.held, w1, wn)} held in the look-back period.`],
+      ['Below minimum', 'warn', `attended some, but fewer than ${plural(check.min, w1, wn)}.`],
+      ['Met minimum', 'ok', `attended at least ${plural(check.min, w1, wn)}.`],
+    ].filter(([s]) => !(check.min === 1 && s === 'Below minimum'));
+    for (const [s, tone, text] of items) {
+      const li = document.createElement('li');
+      const p = document.createElement('span');
+      p.className = 'mb-pill mb-' + tone;
+      p.textContent = s;
+      li.append(p, ' ' + text);
+      el.append(li);
+    }
+  });
   dash.draw('ab-rows', (tb) => {
     tb.replaceChildren();
     const r = runCheck();
     if (!r) return;
     for (const x of r.out) {
       const tr = document.createElement('tr');
-      if (x.n === 0) pill(tr, 'None', 'bad'); else if (x.n < check.min) pill(tr, 'Low', 'warn'); else pill(tr, 'OK', 'ok');
+      if (x.n === 0) pill(tr, 'Missed all', 'bad'); else if (x.n < check.min) pill(tr, 'Below minimum', 'warn'); else pill(tr, 'Met minimum', 'ok');
       nameButton(tr, x.name); td(tr, x.company); td(tr, fmt(x.n), 'la-n');
       td(tr, x.lastEvent ? dayName(x.lastEvent) : '—'); td(tr, x.lastDrill ? dayName(x.lastDrill) : '—'); td(tr, fmt(x.since), 'la-n');
       tb.append(tr);
@@ -524,6 +543,14 @@
   }
   const prevShowTab = window.showTab;
   window.showTab = function (name, link) { prevShowTab(name, link); fitControls(name); };
+
+  // ---------- zoom tip only where a zoomable chart is showing ----------
+  function fitZoomTip() {
+    const page = document.querySelector('.la-page:not([hidden])');
+    const has = !!page && [...page.querySelectorAll('.la-chart svg')].some((s) => !s.closest('[hidden]'));
+    for (const t of document.querySelectorAll('.la-zoomhint')) if (t.hidden === has) t.hidden = !has;
+  }
+  dash.onData(() => requestAnimationFrame(fitZoomTip));
 
   // ---------- CSV downloads ----------
   function csvOf(card) {

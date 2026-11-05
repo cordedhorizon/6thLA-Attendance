@@ -477,6 +477,37 @@ foot = '''
 </body>
 </html>
 '''
+# ---- Real Discord data (2026-11-05): more companies, guests, and drills that only posted a headcount ----
+# Headcount-only drills arrive as rows with anon: true (no name). They count as held and in attendance,
+# never toward a person, a company's people, or first-timers.
+REAL = [
+ ("const ORDER = ['Field Staff', 'A Co', 'B Co', 'C Co', 'D Co', 'Battery', 'Recruits'];",
+  "const ORDER = ['Field Staff', 'A Co', 'B Co', 'C Co', 'D Co', 'E Co', 'F Co', \"D'Aq.F\", 'I Co', 'Battery', 'Recruits', 'Guests'];"),
+ ("const companiesIn = (r) => [...new Set(r.map((x) => x.company))]",
+  "const companiesIn = (r) => [...new Set(r.filter((x) => x.company !== 'Unlisted').map((x) => x.company))]"),
+ ("    for (const r of rs0) { const d = r.first_ever ?? r.date;",
+  "    for (const r of rs0) { if (r.anon) continue; const d = r.first_ever ?? r.date;"),
+ ("        const names = new Set(rs.map((r) => r.name));\n        const fresh",
+  "        const names = new Set(rs.filter((r) => !r.anon).map((r) => r.name));\n        const fresh"),
+ ("      for (const r of rs) { if (!by.has(r.company)) by.set(r.company, { n: 0, names: new Set() });",
+  "      const named = rs.filter((r) => !r.anon).length;\n      for (const r of rs) { if (r.anon) continue; if (!by.has(r.company)) by.set(r.company, { n: 0, names: new Set() });"),
+ ("share: g.n / rs.length, people: g.names.size", "share: g.n / named, people: g.names.size"),
+ ("        const key = pk + '|' + r.company;", "        if (r.anon) continue;\n        const key = pk + '|' + r.company;"),
+ ("    for (const r of [...rs0].sort((a, b) => a.date.localeCompare(b.date))) {",
+  "    for (const r of rs0.filter((x) => !x.anon).sort((a, b) => a.date.localeCompare(b.date))) {"),
+ ("        if ((year !== 'all' && r.year !== year) || (day !== 'all' && r.day !== day)) continue;",
+  "        if (r.anon || (year !== 'all' && r.year !== year) || (day !== 'all' && r.day !== day)) continue;"),
+ ("      const key = r.name + '|' + r.date.slice(0, 7);", "      if (r.anon) continue;\n      const key = r.name + '|' + r.date.slice(0, 7);"),
+ ("    for (const r of [...attendance].sort((a, b) => a.date.localeCompare(b.date))) {",
+  "    for (const r of attendance.filter((x) => !x.anon).sort((a, b) => a.date.localeCompare(b.date))) {"),
+ ('<p class="la-sample"><b>Sample data.</b> Every name and number here is made up to show the layout. Real attendance from #attendance and #drill-attendance replaces it once it has been gathered.</p>',
+  '<p class="la-sample">Counted from every post in #attendance (from Dec 2023) and #drill-attendance (from Mar 2024). Eight drills in Mar–Apr 2024 only posted a headcount: they count as held, but not toward anyone\'s own totals. No drills were posted from Jun 2024 to Oct 2025.</p>'),
+ ('.la-sample { margin: 0; padding: var(--cds-pad-sm) var(--cds-pad-md); border: 1px dashed var(--color-border-line);',
+  '.la-sample { margin: 0; padding: var(--cds-pad-sm) var(--cds-pad-md); border: 1px solid var(--color-border-line);'),
+]
+for a, b in REAL:
+    rep(a, b)
+
 # Stamp each local file with a hash of its contents, so browsers fetch the new copy after every change
 # instead of reusing a cached one (GitHub Pages lets browsers cache files for 10 minutes).
 import hashlib, os

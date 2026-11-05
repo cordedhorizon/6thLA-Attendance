@@ -25,6 +25,7 @@
     for (const r of data) {
       if (!posts.has(r.post)) posts.set(r.post, { post: r.post, date: r.date, kind: r.kind, score: r.score ?? null, n: 0 });
       posts.get(r.post).n += 1;
+      if (r.anon) continue; // headcount-only drill: counts as held, not toward any person
       if (!people.has(r.name)) people.set(r.name, { name: r.name, rows: [] });
       people.get(r.name).rows.push(r);
     }

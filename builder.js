@@ -193,7 +193,7 @@
       const k = x + '\u0000' + s;
       if (!cells.has(k)) cells.set(k, { x, s, n: 0, posts: new Set(), names: new Set(), wins: 0, decided: 0 });
       const c = cells.get(k);
-      c.n += 1; c.posts.add(r.post); c.names.add(r.name);
+      c.n += 1; c.posts.add(r.post); if (!r.anon) c.names.add(r.name);
       if (r.res === 'W' || r.res === 'L') { c.decided += 1; if (r.res === 'W') c.wins += 1; }
       xTotal.set(x, (xTotal.get(x) ?? 0) + 1);
     }

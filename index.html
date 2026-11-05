@@ -16,7 +16,7 @@
 <main class="site">
 <style>
   .la { display: flex; flex-direction: column; gap: var(--cds-gap-lg); font-family: var(--font-anthropic-sans); }
-  .la-sample { margin: 0; padding: var(--cds-pad-sm) var(--cds-pad-md); border: 1px dashed var(--color-border-line); border-radius: var(--cds-radius); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
+  .la-sample { margin: 0; padding: var(--cds-pad-sm) var(--cds-pad-md); border: 1px solid var(--color-border-line); border-radius: var(--cds-radius); color: var(--color-fg-muted); font-size: var(--cds-font-size-caption); }
   .la-sample b { color: var(--color-warn); font-weight: 600; }
   .la-head { display: flex; flex-direction: column; gap: var(--cds-gap-xs); }
   .la-head h1 { margin: 0; font-family: var(--font-anthropic-serif); font-weight: 400; font-size: var(--cds-font-size-title); text-wrap: balance; }
@@ -84,7 +84,7 @@
 </style>
 
 <div class="la">
-  <p class="la-sample"><b>Sample data.</b> Every name and number here is made up to show the layout. Real attendance from #attendance and #drill-attendance replaces it once it has been gathered.</p>
+  <p class="la-sample">Counted from every post in #attendance (from Dec 2023) and #drill-attendance (from Mar 2024). Eight drills in Mar–Apr 2024 only posted a headcount: they count as held, but not toward anyone's own totals. No drills were posted from Jun 2024 to Oct 2025.</p>
 
   <header class="la-head">
     <h1>6th Louisiana attendance</h1>
@@ -93,7 +93,7 @@
       <input id="find-member" type="search" list="all-members" placeholder="Find a member" aria-label="Find a member" autocomplete="off">
       <datalist id="all-members"></datalist>
       <p class="mb-asof" data-draw="mb-asof"></p>
-      <p class="mb-asof">Site updated Nov 4, 2026, 19:00 UTC</p>
+      <p class="mb-asof">Site updated Nov 5, 2026, 02:23 UTC</p>
     </div>
   </header>
 
@@ -674,7 +674,7 @@ dash.calc('summary', {
     const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const rs0 = attendance.map((r) => ({ ...r, year: r.date.slice(0, 4), day: DAYS[new Date(r.date + 'T00:00:00Z').getUTCDay()] }));
     const first = new Map();
-    for (const r of rs0) { const d = r.first_ever ?? r.date; const f = first.get(r.name); if (!f || d < f) first.set(r.name, d); }
+    for (const r of rs0) { if (r.anon) continue; const d = r.first_ever ?? r.date; const f = first.get(r.name); if (!f || d < f) first.set(r.name, d); }
     const lo = rs0.reduce((m, r) => (r.date < m ? r.date : m), '9999');
     const years = [...new Set(rs0.map((r) => r.year))].sort();
     const out = [];
@@ -683,7 +683,7 @@ dash.calc('summary', {
       for (const year of ['all', ...years]) {
         const rs = rs0.filter((r) => (kind === 'all' || r.kind === kind) && (day === 'all' || r.day === day) && (year === 'all' || r.year === year));
         const posts = new Set(rs.map((r) => r.post)).size;
-        const names = new Set(rs.map((r) => r.name));
+        const names = new Set(rs.filter((r) => !r.anon).map((r) => r.name));
         const fresh = [...names].filter((n) => (year === 'all' ? first.get(n) >= lo : first.get(n).slice(0, 4) === year)).length;
         const row = { kind, day, year, posts, turnout: rs.length, avg: posts ? Math.round(rs.length / posts * 10) / 10 : null, people: names.size, new_people: fresh };
         const p = year === 'all' ? null : prev;
@@ -733,8 +733,9 @@ dash.calc('companies', {
       const rs = rs0.filter((r) => (kind === 'all' || r.kind === kind) && (day === 'all' || r.day === day) && (year === 'all' || r.year === year));
       const posts = new Set(rs.map((r) => r.post)).size;
       const by = new Map();
-      for (const r of rs) { if (!by.has(r.company)) by.set(r.company, { n: 0, names: new Set() }); const g = by.get(r.company); g.n += 1; g.names.add(r.name); }
-      for (const [company, g] of by) out.push({ kind, day, year, company, turnout: g.n, avg: Math.round(g.n / posts * 10) / 10, share: g.n / rs.length, people: g.names.size });
+      const named = rs.filter((r) => !r.anon).length;
+      for (const r of rs) { if (r.anon) continue; if (!by.has(r.company)) by.set(r.company, { n: 0, names: new Set() }); const g = by.get(r.company); g.n += 1; g.names.add(r.name); }
+      for (const [company, g] of by) out.push({ kind, day, year, company, turnout: g.n, avg: Math.round(g.n / posts * 10) / 10, share: g.n / named, people: g.names.size });
     }
     return out;
   },
@@ -754,6 +755,7 @@ dash.calc('company_monthly', {
         const pk = r.date.slice(0, 7) + '|' + kind + '|' + day;
         if (!posts.has(pk)) posts.set(pk, new Set());
         posts.get(pk).add(r.post);
+        if (r.anon) continue;
         const key = pk + '|' + r.company;
         if (!m.has(key)) m.set(key, { month: r.date.slice(0, 7), kind, day, company: r.company, turnout: 0, pk });
         m.get(key).turnout += 1;
@@ -778,7 +780,7 @@ dash.calc('people', {
     const LADDER = ['rct', 'pvt', 'pfc', 'cpl', 'sgt', 'ssgt', 'osgt', '1stsgt', '1sgt', 'qmsgt', 'sgtmaj', '2ndlt', '2lt', 'lt', '1stlt', '1lt', 'capt', 'cpt', 'maj', 'ltcol', 'col', 'gen'];
     const rankOrder = (k) => { if (!k) return null; const i = LADDER.indexOf(k.toLowerCase().replace(/[^a-z0-9]/g, '')); return i < 0 ? 8 : i; };
     const span = new Map();
-    for (const r of [...rs0].sort((a, b) => a.date.localeCompare(b.date))) {
+    for (const r of rs0.filter((x) => !x.anon).sort((a, b) => a.date.localeCompare(b.date))) {
       const s = span.get(r.name);
       if (!s) span.set(r.name, { first: r.date, last: r.date, company: r.company, rank: r.rank ?? null });
       else { s.last = r.date; if (r.rank) s.rank = r.rank; if (r.company !== 'Recruits' || s.company === 'Recruits') s.company = r.company; }
@@ -788,7 +790,7 @@ dash.calc('people', {
     for (const year of ['all', ...years]) for (const day of ['all', ...DAYS]) {
       const by = new Map();
       for (const r of rs0) {
-        if ((year !== 'all' && r.year !== year) || (day !== 'all' && r.day !== day)) continue;
+        if (r.anon || (year !== 'all' && r.year !== year) || (day !== 'all' && r.day !== day)) continue;
         if (!by.has(r.name)) by.set(r.name, { events: 0, drills: 0, first: r.date, last: r.date });
         const g = by.get(r.name);
         if (r.kind === 'event') g.events += 1; else g.drills += 1;
@@ -830,6 +832,7 @@ dash.calc('person_monthly', {
   fn: (attendance) => {
     const m = new Map();
     for (const r of attendance) {
+      if (r.anon) continue;
       const key = r.name + '|' + r.date.slice(0, 7);
       if (!m.has(key)) m.set(key, { name: r.name, month: r.date.slice(0, 7), events: 0, drills: 0 });
       const g = m.get(key);
@@ -845,7 +848,7 @@ dash.calc('multi_company', {
   description: 'People whose name was listed under two or more company headers, with the headers in the order they appeared.',
   fn: (attendance) => {
     const by = new Map();
-    for (const r of [...attendance].sort((a, b) => a.date.localeCompare(b.date))) {
+    for (const r of attendance.filter((x) => !x.anon).sort((a, b) => a.date.localeCompare(b.date))) {
       if (!by.has(r.name)) by.set(r.name, { order: [], n: 0, first: r.date, last: r.date });
       const g = by.get(r.name);
       g.n += 1; g.last = r.date;
@@ -859,7 +862,7 @@ dash.calc('multi_company', {
 </script>
 
 <script>
-const ORDER = ['Field Staff', 'A Co', 'B Co', 'C Co', 'D Co', 'Battery', 'Recruits'];
+const ORDER = ['Field Staff', 'A Co', 'B Co', 'C Co', 'D Co', 'E Co', 'F Co', "D'Aq.F", 'I Co', 'Battery', 'Recruits', 'Guests'];
 const enc = encodeURIComponent;
 const fmt = d3.format(',');
 const pct = d3.format('.0%');
@@ -1333,7 +1336,7 @@ dash.draw('held', (el) => {
   barChart(el, months, series, { height: 180 });
 });
 
-const companiesIn = (r) => [...new Set(r.map((x) => x.company))].sort((a, b) => companyRank(a) - companyRank(b) || a.localeCompare(b));
+const companiesIn = (r) => [...new Set(r.filter((x) => x.company !== 'Unlisted').map((x) => x.company))].sort((a, b) => companyRank(a) - companyRank(b) || a.localeCompare(b));
 
 dash.draw('mix', (el) => {
   if (!chartState(el, 'company_monthly')) return;
@@ -1526,9 +1529,9 @@ dash.draw('multi-rows', (tb) => {
 });
 </script>
 
-<script src="builder.js?v=3f27ec5e"></script>
-<script src="members.js?v=c072a8e3"></script>
-<script src="more.js?v=e160daef"></script>
+<script src="builder.js?v=d2a23c79"></script>
+<script src="members.js?v=a79bb3a9"></script>
+<script src="more.js?v=9f2ec900"></script>
 <footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
 </main>
 </body>

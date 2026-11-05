@@ -28,9 +28,9 @@
     head.append(h, close);
     const m = p.score ? String(p.score).match(/^\s*(\d+)\s*[-–:]\s*(\d+)/) : null;
     const result = m ? (+m[1] > +m[2] ? `Won ${m[1]}-${m[2]}` : +m[1] < +m[2] ? `Lost ${m[1]}-${m[2]}` : `Drew ${m[1]}-${m[2]}`) : null;
-    const sub = el('p', 'mb-note', [plural(rs.length, 'person', 'people') + ' attended', result].filter(Boolean).join('. ') + '. Click a name to open their card.');
+    const sub = el('p', 'mb-note', rs[0].anon ? `${plural(rs.length, 'person', 'people')} attended. Only a headcount was posted for this drill, so no names are listed.` : [plural(rs.length, 'person', 'people') + ' attended', result].filter(Boolean).join('. ') + '. Click a name to open their card.');
     const body = el('div', 'mb-roster');
-    const groups = d3.group(rs, (r) => r.company);
+    const groups = d3.group(rs.filter((r) => !r.anon), (r) => r.company);
     for (const c of [...groups.keys()].sort((a, z) => companyRank(a) - companyRank(z) || a.localeCompare(z))) {
       const sec = el('section');
       const names = groups.get(c).map((r) => r.name).sort((a, z) => a.localeCompare(z));
@@ -283,7 +283,7 @@
     const posts = b.posts.filter((x) => x.date >= from && x.date <= to);
     const held = (k) => posts.filter((x) => x.kind === k).length;
     const avg = (k) => (held(k) ? rs.filter((r) => r.kind === k).length / held(k) : null);
-    const names = new Set(rs.map((r) => r.name));
+    const names = new Set(rs.filter((r) => !r.anon).map((r) => r.name));
     const fresh = [...names].filter((n) => b.people.get(n).first >= from).length;
     const joined = [...b.people.values()].filter((g) => { const j = g.rows[0].company === 'Recruits' && g.rows.find((r) => r.company !== 'Recruits'); return j && j.date >= from && j.date <= to && (!group || j.company === group); }).length;
     let w = 0, l = 0;

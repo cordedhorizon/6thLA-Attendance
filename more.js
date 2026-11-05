@@ -767,14 +767,17 @@
     if (!autoKeys.has(card)) autoKeys.set(card, 'card-' + ++n);
     return autoKeys.get(card);
   };
-  const norm = (s) => String(s ?? '').trim().toLowerCase().replace(/s$/, '');
+  // A legend says "Events" where the dots say "Event", and "Loss" where a dot says "Loss 1-2".
+  const low = (s) => String(s ?? '').trim().toLowerCase();
+  const sing = (s) => s.replace(/s$/, '');
   const isOff = (set, name) => {
-    const a = norm(name);
-    for (const h of set) { const b = norm(h); if (a === b || a.startsWith(b + ' ')) return true; }
+    const a = low(name);
+    for (const h of set) { const b = low(h); if (a === b || sing(a) === sing(b) || a.startsWith(b + ' ') || a.startsWith(sing(b) + ' ')) return true; }
     return false;
   };
   const hiddenFor = (el) => hidden.get(keyOf(el.closest('.la-card'))) ?? new Set();
-  const legendSpans = (card) => [...card.querySelectorAll('.la-legend:not(.mb-cal-key) span')].filter((s) => s.querySelector('i'));
+  // Only entries that are showing: a legend can keep a hidden "Drills" entry while only events are picked.
+  const legendSpans = (card) => [...card.querySelectorAll('.la-legend:not(.mb-cal-key) span')].filter((s) => s.querySelector('i') && s.getClientRects().length);
   const labelOf = (span) => span.textContent.trim();
 
   function mark(card) {
@@ -819,7 +822,7 @@
     const all = legendSpans(card).map(labelOf);
     if (set.has(name)) set.delete(name);
     else if (all.filter((x) => !set.has(x) && x !== name).length) set.add(name);
-    else return; // the last one showing stays
+    else set.clear(); // clicking the only one left showing brings them all back
     hidden.set(key, set);
     const names = new Set([...card.querySelectorAll('[data-draw]')].map((e) => e.dataset.draw));
     for (const nm of names) dash.draw(nm);
@@ -849,9 +852,9 @@
   const SECTIONS = [
     ['Overview', ['regiment']],
     ['Events', ['results', 'patterns']],
-    ['Companies', ['companies', 'compare']],
+    ['Companies', ['companies']],
     ['Members', ['people', 'recruits', 'promotions', 'milestones']],
-    ['Tools', ['check', 'builder', 'checks']],
+    ['Tools', ['check', 'compare', 'builder', 'checks']],
   ];
   const sectionOf = (tab) => SECTIONS.find(([, t]) => t.includes(tab)) ?? SECTIONS[0];
   const $ = (s) => document.querySelector(s);

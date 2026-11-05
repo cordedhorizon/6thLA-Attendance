@@ -843,3 +843,80 @@
     for (const c of document.querySelectorAll('.la-card')) mark(c);
   });
 })();
+
+// ---------- five sections, each with its own sub-tabs ----------
+(function () {
+  const SECTIONS = [
+    ['Overview', ['regiment']],
+    ['Events', ['results', 'patterns']],
+    ['Companies', ['companies', 'compare']],
+    ['Members', ['people', 'recruits', 'promotions', 'milestones']],
+    ['Tools', ['check', 'builder', 'checks']],
+  ];
+  const sectionOf = (tab) => SECTIONS.find(([, t]) => t.includes(tab)) ?? SECTIONS[0];
+  const $ = (s) => document.querySelector(s);
+  const make = (tag, attrs = {}, text) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text != null) e.textContent = text; return e; };
+
+  // New "Days and calendar" page under Events, built from cards that were on the long Regiment page.
+  const results = $('#results');
+  if (results && !$('#patterns')) {
+    const page = make('section', { id: 'patterns', class: 'la-page', role: 'tabpanel', 'aria-labelledby': 'tab-patterns', hidden: '' });
+    const dayGrid = $('#by-day')?.closest('.la-grid');
+    if (dayGrid) page.append(dayGrid);
+    const held = $('#held');
+    const mix = $('#mix');
+    if (held) page.append(held);
+    if (mix) { const old = mix.closest('.la-grid'); $('#companies')?.append(mix); if (old && !old.children.length) old.remove(); }
+    const cal = $('#calendar');
+    if (cal) page.append(cal);
+    results.after(page);
+    if (typeof tabs !== 'undefined' && !tabs.includes('patterns')) tabs.push('patterns');
+  }
+
+  // Sub-tab buttons, in section order.
+  const row = $('.la-tabs');
+  if (!row) return;
+  if (!row.querySelector('[data-tab="patterns"]')) {
+    const b = make('button', { id: 'tab-patterns', role: 'tab', 'data-tab': 'patterns', 'aria-selected': 'false' }, 'Days and calendar');
+    b.addEventListener('click', () => showTab('patterns'));
+    row.append(b);
+  }
+  for (const [, ts] of SECTIONS) for (const t of ts) { const b = row.querySelector(`[data-tab="${t}"]`); if (b) row.append(b); }
+  row.setAttribute('aria-label', 'Pages in this section');
+
+  const nav = make('nav', { class: 'la-sections', 'aria-label': 'Sections' });
+  const last = {};
+  for (const [name, ts] of SECTIONS) {
+    const b = make('button', { type: 'button', 'data-section': name }, name);
+    b.addEventListener('click', () => showTab(last[name] ?? ts[0]));
+    nav.append(b);
+  }
+  row.closest('.la-bar')?.before(nav);
+
+  function fit(name) {
+    const [sec, ts] = sectionOf(name);
+    last[sec] = name;
+    for (const b of nav.children) b.setAttribute('aria-current', b.dataset.section === sec ? 'page' : 'false');
+    // Only touch 'hidden' when it changes, or the observer below would keep firing.
+    for (const b of row.querySelectorAll('[data-tab]')) { const h = !ts.includes(b.dataset.tab); if (b.hidden !== h) b.hidden = h; }
+    if (row.hidden !== ts.length < 2) row.hidden = ts.length < 2;
+  }
+  const prev = window.showTab;
+  window.showTab = function (name, link) { prev(name, link); fit(name); };
+  fit(document.querySelector('.la-page:not([hidden])')?.id || 'regiment');
+  // The page's own tab buttons call the original showTab, so keep the sections in step after any tab change.
+  new MutationObserver(() => fit(document.querySelector('.la-page:not([hidden])')?.id || 'regiment'))
+    .observe(document.body, { attributes: true, attributeFilter: ['hidden'], subtree: true });
+
+  const st = document.createElement('style');
+  st.textContent = `
+    .la-sections { display: flex; gap: 4px; border-bottom: 1px solid var(--color-border-line); overflow-x: auto; scrollbar-width: none; }
+    .la-sections button { font: inherit; font-size: var(--cds-font-size-body, 15px); font-weight: var(--cds-font-weight-medium, 500); padding: 8px 12px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: transparent; color: var(--color-fg-muted); cursor: pointer; white-space: nowrap; }
+    .la-sections button:hover { color: var(--color-fg); }
+    .la-sections button[aria-current="page"] { color: var(--color-fg); border-bottom-color: var(--color-fg); }
+    .la-sections button:focus-visible { outline: 2px solid var(--color-fg-muted); outline-offset: -2px; }
+    .la-tabs[hidden] { display: none; }
+    .la-tabs button[hidden] { display: none; }
+    @media (max-width: 520px) { .la-sections { gap: 0; } .la-sections button { flex: 1 1 auto; padding: 8px 2px; font-size: 14px; } }`;
+  document.head.append(st);
+})();

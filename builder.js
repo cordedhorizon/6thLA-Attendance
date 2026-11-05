@@ -38,6 +38,15 @@
   const SPLITS = { none: 'Nothing', kind: 'Event or drill', battalion: 'Battalion', company: 'Company', day: 'Day of the week', rank: 'Rank', result: 'Result' };
   // Groupings of members, which the whole-regiment measures can't be broken down by.
   const MEMBER_GROUPS = ['battalion', 'company', 'rank'];
+  // What can be shown one event or drill at a time, and why the rest can't.
+  const NOT_PER_POST = {
+    avg: 'the same as attendance for one event',
+    held: 'always 1 for one event',
+    people: 'the same as attendance for one event',
+    attended: 'always 0 or 1 for one event',
+    winrate: 'always 0% or 100% for one event',
+    results: 'always 1 for one event',
+  };
   const RESULT_NAMES = { W: 'Won', L: 'Lost', D: 'Drew' };
 
   // ---------- choose charts ----------
@@ -120,8 +129,9 @@
     const notes = [];
     const before = { x: form.x.value, split: form.split.value, measure: form.measure.value };
     if (changed === 'measure' && form.measure.value === 'event') form.x.value = 'post';
-    if (form.x.value === 'post') form.measure.value = 'event';
-    else if (form.measure.value === 'event') form.measure.value = 'avg';
+    if (form.x.value === 'post' && NOT_PER_POST[form.measure.value]) form.measure.value = 'event';
+    else if (form.x.value !== 'post' && form.measure.value === 'event') form.measure.value = 'avg';
+    for (const o of form.measure.options) mark(o, form.x.value === 'post' && NOT_PER_POST[o.value] ? NOT_PER_POST[o.value] : null);
     if (changed === 'measure' && form.measure.value === 'results' && form.split.value === 'none') form.split.value = 'result';
     const m = form.measure.value;
     const team = REGIMENT_ONLY.has(m);
@@ -143,8 +153,8 @@
     for (const k of ['measure', 'x', 'split']) {
       if (k === changed || form[k].value === before[k]) continue;
       const why = k === 'x' && form.x.value === 'post' ? 'attendance at each event is shown one event at a time'
-        : k === 'measure' && before.x === 'post' && changed === 'x' ? `${ACROSS.post.toLowerCase()} only goes with attendance at each event`
-        : k === 'measure' && form.x.value === 'post' ? 'each event or drill only shows attendance at that event'
+        : k === 'measure' && form.x.value === 'post' && NOT_PER_POST[before.measure] ? `${MEASURES[before.measure].toLowerCase()} is ${NOT_PER_POST[before.measure]}`
+        : k === 'measure' && before.measure === 'event' ? 'attendance at each event only goes with each event or drill'
         : k === 'x' && team ? `${mName.toLowerCase()} counts the whole regiment, not one group`
         : k === 'split' && before.split === form.x.value ? 'the same thing is already used for Across'
         : k === 'split' && team ? `${mName.toLowerCase()} counts the whole regiment, not one group`
@@ -164,7 +174,7 @@
   }
 
   function describe(cfg) {
-    let s = cfg.x === 'post' ? 'Attendance at each event or drill' : `${MEASURES[cfg.measure]} by ${ACROSS[cfg.x].toLowerCase()}`;
+    let s = cfg.x === 'post' ? (cfg.measure === 'event' ? 'Attendance at each event or drill' : `${MEASURES[cfg.measure]} at each event or drill`) : `${MEASURES[cfg.measure]} by ${ACROSS[cfg.x].toLowerCase()}`;
     if (cfg.split !== 'none') s += `, split by ${SPLITS[cfg.split].toLowerCase()}`;
     const only = [];
     if (cfg.company && cfg.company !== 'all') only.push(cfg.company);
@@ -221,15 +231,21 @@
     const team = REGIMENT_ONLY.has(measure);
     const p = P();
     const rs = [];
-    for (const r0 of all) {
-      if (p.from && r0.date < p.from) continue;
-      if (p.to && r0.date > p.to) continue;
-      if (p.year !== 'all' && !r0.date.startsWith(p.year)) continue;
-      if (p.kind !== 'all' && r0.kind !== p.kind) continue;
+    const dayIn = (r0) => {
+      if (p.from && r0.date < p.from) return null;
+      if (p.to && r0.date > p.to) return null;
+      if (p.year !== 'all' && !r0.date.startsWith(p.year)) return null;
+      if (p.kind !== 'all' && r0.kind !== p.kind) return null;
       const day = DAYS[new Date(r0.date + 'T00:00:00Z').getUTCDay()];
-      if (p.day !== 'all' && day !== p.day) continue;
+      return p.day !== 'all' && day !== p.day ? null : day;
+    };
+    for (const r0 of all) {
+      const day = dayIn(r0);
+      if (!day) continue;
       if (!team && cfg.company && cfg.company !== 'all' && !window.LA.inGroup(r0.company, cfg.company)) continue;
       if ((cfg.x === 'battalion' || cfg.split === 'battalion') && !window.LA.battalionOf(r0.company)) continue;
+      // Headcount-only drills have no names, so they can't be split into companies or ranks.
+      if (r0.anon && (MEMBER_GROUPS.includes(cfg.x) || MEMBER_GROUPS.includes(cfg.split))) continue;
       if (!team && cfg.rank && cfg.rank !== 'all' && r0.rank !== cfg.rank) continue;
       if (!team && cfg.person && r0.name.toLowerCase() !== cfg.person.toLowerCase()) continue;
       rs.push({ ...r0, day });
@@ -265,11 +281,15 @@
     else if (cfg.x === 'company') xs.sort((a, b) => companyRank(a) - companyRank(b) || a.localeCompare(b));
     else if (cfg.x === 'post') {
       const info = new Map(rs.map((r) => [r.post, r]));
+      // Other measures still list every event or drill in the period, at 0 when nothing happened there.
+      if (measure !== 'event') for (const r0 of records('event')) { if (!info.has(r0.post)) { const day = dayIn(r0); if (day) info.set(r0.post, { ...r0, day }); } }
+      xs = [...info.keys()];
       xs.sort((p, q) => info.get(p).date.localeCompare(info.get(q).date) || p.localeCompare(q));
       postInfo = info;
     } else xs.sort();
     if (cfg.x === 'month' && xs.length) xs = monthsBetween(xs[0], xs[xs.length - 1]);
     let ss = [...new Set([...cells.values()].map((c) => c.s))];
+    if (!ss.length && cfg.x === 'post' && cfg.split === 'none' && xs.length) ss = ['All'];
     if (cfg.split === 'day') ss = DAYS.filter((d) => ss.includes(d));
     else if (cfg.split === 'company') ss.sort((a, b) => companyRank(a) - companyRank(b) || a.localeCompare(b));
     else if (cfg.split === 'kind') ss = ['Events', 'Drills'].filter((k) => ss.includes(k));
@@ -279,10 +299,11 @@
       : cfg.split === 'company' ? companyColor(s)
       : cfg.split === 'result' ? ({ Won: dash.colors[2], Lost: dash.colors[6] }[s] ?? 'var(--cds-chart-muted)')
       : dash.colors[i % dash.colors.length]);
+    const zeroFill = cfg.x === 'post' && measure !== 'event' && measure !== 'share';
     const series = ss.map((s, i) => ({
-      name: cfg.split !== 'none' ? s : cfg.x === 'post' ? 'Attendance' : MEASURES[cfg.measure],
+      name: cfg.split !== 'none' ? s : cfg.x === 'post' && measure === 'event' ? 'Attendance' : MEASURES[measure],
       color: color(s, i),
-      values: new Map([...cells.values()].filter((c) => c.s === s).map((c) => [c.x, value(c)]).filter(([, v]) => v != null)),
+      values: new Map([...(zeroFill ? xs.map((x) => [x, 0]) : []), ...[...cells.values()].filter((c) => c.s === s).map((c) => [c.x, value(c)]).filter(([, v]) => v != null)]),
     }));
     return { xs, series };
   }

@@ -270,7 +270,13 @@
     for (const k of ['p1f', 'p1t', 'p2f', 'p2t']) if (document.activeElement !== cmp[k]) cmp[k].value = p[k] || '';
     const b = all();
     if (b && !cmp.g1.options.length) {
-      for (const sel of [cmp.g1, cmp.g2]) sel.replaceChildren(new Option('Whole regiment', ''), ...companiesIn(b.data).map((c) => new Option(c, c)));
+      for (const sel of [cmp.g1, cmp.g2]) {
+        const bn = document.createElement('optgroup'); bn.label = 'Battalions';
+        bn.append(...L.BATTALIONS.map((x) => new Option(L.battalionLabel(x), x)));
+        const co = document.createElement('optgroup'); co.label = 'Companies';
+        co.append(...companiesIn(b.data).map((c) => new Option(c, c)));
+        sel.replaceChildren(new Option('Whole regiment', ''), bn, co);
+      }
     }
     cmp.g1.value = p.g1 || '';
     cmp.g2.value = p.g2 || '';
@@ -279,13 +285,13 @@
   const groupName = (g) => g || 'Whole regiment';
 
   function periodStats(b, from, to, group) {
-    const rs = b.data.filter((r) => r.date >= from && r.date <= to && (!group || r.company === group));
+    const rs = b.data.filter((r) => r.date >= from && r.date <= to && L.inGroup(r.company, group));
     const posts = b.posts.filter((x) => x.date >= from && x.date <= to);
     const held = (k) => posts.filter((x) => x.kind === k).length;
     const avg = (k) => (held(k) ? rs.filter((r) => r.kind === k).length / held(k) : null);
     const names = new Set(rs.filter((r) => !r.anon).map((r) => r.name));
     const fresh = [...names].filter((n) => b.people.get(n).first >= from).length;
-    const joined = [...b.people.values()].filter((g) => { const j = g.rows[0].company === 'Recruits' && g.rows.find((r) => r.company !== 'Recruits'); return j && j.date >= from && j.date <= to && (!group || j.company === group); }).length;
+    const joined = [...b.people.values()].filter((g) => { const j = g.rows[0].company === 'Recruits' && g.rows.find((r) => r.company !== 'Recruits'); return j && j.date >= from && j.date <= to && L.inGroup(j.company, group); }).length;
     let w = 0, l = 0;
     for (const x of posts) {
       const m = x.kind === 'event' && x.score ? String(x.score).match(/^\s*(\d+)\s*[-–:]\s*(\d+)/) : null;
@@ -746,5 +752,94 @@
   document.addEventListener('DOMContentLoaded', () => {
     applyHash();
     if (currentTab() === 'compare') for (const fl of document.querySelectorAll('.la-filters')) fl.hidden = true;
+  });
+})();
+
+// ---------- click a legend entry to hide or show it ----------
+(function () {
+  const hidden = new Map(); // card key -> Set of hidden legend names
+  const autoKeys = new WeakMap();
+  let n = 0;
+  const keyOf = (card) => {
+    if (!card) return null;
+    if (card.id) return card.id;
+    if (card.dataset.hideKey) return card.dataset.hideKey;
+    if (!autoKeys.has(card)) autoKeys.set(card, 'card-' + ++n);
+    return autoKeys.get(card);
+  };
+  const norm = (s) => String(s ?? '').trim().toLowerCase().replace(/s$/, '');
+  const isOff = (set, name) => {
+    const a = norm(name);
+    for (const h of set) { const b = norm(h); if (a === b || a.startsWith(b + ' ')) return true; }
+    return false;
+  };
+  const hiddenFor = (el) => hidden.get(keyOf(el.closest('.la-card'))) ?? new Set();
+  const legendSpans = (card) => [...card.querySelectorAll('.la-legend:not(.mb-cal-key) span')].filter((s) => s.querySelector('i'));
+  const labelOf = (span) => span.textContent.trim();
+
+  function mark(card) {
+    if (!card || !card.querySelector('.la-chart')) return;
+    const set = hidden.get(keyOf(card)) ?? new Set();
+    for (const s of legendSpans(card)) {
+      const off = set.has(labelOf(s));
+      s.classList.add('la-lg-toggle');
+      s.classList.toggle('la-lg-off', off);
+      s.setAttribute('role', 'button');
+      s.setAttribute('tabindex', '0');
+      s.setAttribute('aria-pressed', String(!off));
+      s.title = off ? 'Click to show' : 'Click to hide';
+    }
+  }
+  const markLater = (el) => requestAnimationFrame(() => mark(el.closest('.la-card')));
+
+  // Keep at least one series, so a chart is never empty.
+  const keep = (list, set, nameOf) => { if (!set.size) return list; const k = list.filter((x) => !isOff(set, nameOf(x))); return k.length ? k : list; };
+  for (const fn of ['lineChart', 'barChart']) {
+    const orig = window[fn];
+    if (typeof orig !== 'function') continue;
+    window[fn] = function (el, xs, series, o) {
+      markLater(el);
+      return orig.call(this, el, xs, keep(series, hiddenFor(el), (s) => s.name), o);
+    };
+  }
+  if (typeof window.postChart === 'function') {
+    const orig = window.postChart;
+    window.postChart = function (el, points, o) {
+      markLater(el);
+      return orig.call(this, el, keep(points, hiddenFor(el), (p) => p.name), o);
+    };
+  }
+
+  function toggle(span) {
+    const card = span.closest('.la-card');
+    if (!card || !card.querySelector('.la-chart')) return;
+    const key = keyOf(card);
+    const set = hidden.get(key) ?? new Set();
+    const name = labelOf(span);
+    const all = legendSpans(card).map(labelOf);
+    if (set.has(name)) set.delete(name);
+    else if (all.filter((x) => !set.has(x) && x !== name).length) set.add(name);
+    else return; // the last one showing stays
+    hidden.set(key, set);
+    const names = new Set([...card.querySelectorAll('[data-draw]')].map((e) => e.dataset.draw));
+    for (const nm of names) dash.draw(nm);
+    const outer = card.closest('[data-draw]');
+    if (outer) dash.draw(outer.dataset.draw);
+    mark(card);
+  }
+  document.addEventListener('click', (e) => {
+    const span = e.target.closest('.la-legend:not(.mb-cal-key) span');
+    if (span && span.querySelector('i')) toggle(span);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const span = e.target.closest?.('.la-lg-toggle');
+    if (span) { e.preventDefault(); toggle(span); }
+  });
+  document.addEventListener('DOMContentLoaded', () => {
+    const st = document.createElement('style');
+    st.textContent = '.la-lg-toggle{cursor:pointer;user-select:none;border-radius:4px}.la-lg-toggle:hover{color:var(--color-fg)}.la-lg-toggle:focus-visible{outline:2px solid var(--color-focus,currentColor);outline-offset:2px}.la-lg-off{opacity:.45;text-decoration:line-through}.la-lg-off i{background:transparent!important;outline:1px solid var(--color-fg-muted)}';
+    document.head.append(st);
+    for (const c of document.querySelectorAll('.la-card')) mark(c);
   });
 })();

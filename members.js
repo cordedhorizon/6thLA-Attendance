@@ -683,7 +683,14 @@
   }
   window.addEventListener('hashchange', route);
   // Shared with more.js.
-  window.LA = { rankOf, rankOrder, withRank, openCompany, coButton, coCell, all, inPeriod, td, pill, emptyRow, tiles, legend, nameButton, openPerson, matchName, weekStreaks, nextMilestone, kindWord, plural, addDays, daysBetween, dayOf, toDate, iso, load, save };
+  // Battalions group companies: A and B are 1st Battalion, C and D are 2nd Battalion.
+  const BATTALION = { 'A Co': '1st Battalion', 'B Co': '1st Battalion', 'C Co': '2nd Battalion', 'D Co': '2nd Battalion' };
+  const BATTALIONS = ['1st Battalion', '2nd Battalion'];
+  const battalionOf = (company) => BATTALION[company] ?? null;
+  // A group is a company or a battalion; '' or null means the whole regiment.
+  const inGroup = (company, group) => !group || company === group || BATTALION[company] === group;
+  const battalionLabel = (b) => `${b} (${Object.keys(BATTALION).filter((c) => BATTALION[c] === b).map((c) => c.replace(' Co', '')).join(' and ')} Co)`;
+  window.LA = { BATTALIONS, battalionOf, inGroup, battalionLabel, rankOf, rankOrder, withRank, openCompany, coButton, coCell, all, inPeriod, td, pill, emptyRow, tiles, legend, nameButton, openPerson, matchName, weekStreaks, nextMilestone, kindWord, plural, addDays, daysBetween, dayOf, toDate, iso, load, save };
   document.addEventListener('DOMContentLoaded', () => {
     route();
     const open = document.querySelector('.la-page:not([hidden])');

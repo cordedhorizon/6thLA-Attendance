@@ -34,8 +34,10 @@
   };
   const PERCENT = new Set(['share', 'winrate']);
   const REGIMENT_ONLY = new Set(['winrate', 'results']);
-  const ACROSS = { post: 'Each event or drill', month: 'Month', quarter: 'Quarter', year: 'Year', day: 'Day of the week', company: 'Company', rank: 'Rank' };
-  const SPLITS = { none: 'Nothing', kind: 'Event or drill', company: 'Company', day: 'Day of the week', rank: 'Rank', result: 'Result' };
+  const ACROSS = { post: 'Each event or drill', month: 'Month', quarter: 'Quarter', year: 'Year', day: 'Day of the week', battalion: 'Battalion', company: 'Company', rank: 'Rank' };
+  const SPLITS = { none: 'Nothing', kind: 'Event or drill', battalion: 'Battalion', company: 'Company', day: 'Day of the week', rank: 'Rank', result: 'Result' };
+  // Groupings of members, which the whole-regiment measures can't be broken down by.
+  const MEMBER_GROUPS = ['battalion', 'company', 'rank'];
   const RESULT_NAMES = { W: 'Won', L: 'Lost', D: 'Drew' };
 
   // ---------- choose charts ----------
@@ -100,18 +102,65 @@
     form.title.value = cfg.title || '';
     syncForm();
   }
+  for (const [sel, before] of [[form.x, 'company'], [form.split, 'company']]) {
+    if (sel && ![...sel.options].some((o) => o.value === 'battalion')) sel.insertBefore(new Option('Battalion', 'battalion'), [...sel.options].find((o) => o.value === before) ?? null);
+  }
   // Attendance at each event only makes sense one event at a time, so it and 'Each event or drill' go together.
+  // Options that can't go with the current choices stay in the list, greyed out, with the reason after them.
+  const baseText = new WeakMap();
+  function mark(o, why) {
+    if (!baseText.has(o)) baseText.set(o, o.textContent);
+    o.disabled = !!why;
+    o.textContent = why ? `${baseText.get(o)} (${why})` : baseText.get(o);
+    o.title = why || '';
+  }
+  const label = (sel) => baseText.get(sel.selectedOptions[0]) ?? sel.selectedOptions[0]?.textContent ?? '';
+  let changeNotes = [];
   function syncForm(changed) {
+    const notes = [];
+    const before = { x: form.x.value, split: form.split.value, measure: form.measure.value };
     if (changed === 'measure' && form.measure.value === 'event') form.x.value = 'post';
     if (form.x.value === 'post') form.measure.value = 'event';
     else if (form.measure.value === 'event') form.measure.value = 'avg';
     if (changed === 'measure' && form.measure.value === 'results' && form.split.value === 'none') form.split.value = 'result';
-    const team = REGIMENT_ONLY.has(form.measure.value);
-    for (const o of form.x.options) o.disabled = team && (o.value === 'company' || o.value === 'rank');
+    const m = form.measure.value;
+    const team = REGIMENT_ONLY.has(m);
+    const mName = MEASURES[m];
+    for (const o of form.x.options) mark(o, team && MEMBER_GROUPS.includes(o.value) ? `not with ${mName.toLowerCase()}` : null);
     if (form.x.selectedOptions[0]?.disabled) form.x.value = 'month';
-    for (const o of form.split.options) o.disabled = (o.value !== 'none' && o.value === form.x.value) || (team && ['company', 'rank'].includes(o.value));
+    for (const o of form.split.options) {
+      mark(o, o.value !== 'none' && o.value === form.x.value ? 'already used for Across'
+        : team && MEMBER_GROUPS.includes(o.value) ? `not with ${mName.toLowerCase()}`
+        : null);
+    }
     if (form.split.selectedOptions[0]?.disabled) form.split.value = 'none';
+    // Filters that a whole-regiment measure ignores are switched off, so it's clear they do nothing.
+    for (const k of ['company', 'rank', 'person']) {
+      form[k].disabled = team && !(k === 'person' && m === 'attended');
+      form[k].title = form[k].disabled ? `${mName} counts the whole regiment, so this filter doesn't apply.` : '';
+    }
+    const what = { x: 'Across', split: 'Split by', measure: 'Show' };
+    for (const k of ['measure', 'x', 'split']) {
+      if (k === changed || form[k].value === before[k]) continue;
+      const why = k === 'x' && form.x.value === 'post' ? 'attendance at each event is shown one event at a time'
+        : k === 'measure' && before.x === 'post' && changed === 'x' ? `${ACROSS.post.toLowerCase()} only goes with attendance at each event`
+        : k === 'measure' && form.x.value === 'post' ? 'each event or drill only shows attendance at that event'
+        : k === 'x' && team ? `${mName.toLowerCase()} counts the whole regiment, not one group`
+        : k === 'split' && before.split === form.x.value ? 'the same thing is already used for Across'
+        : k === 'split' && team ? `${mName.toLowerCase()} counts the whole regiment, not one group`
+        : k === 'split' && m === 'results' ? 'wins and losses are split by result'
+        : null;
+      notes.push(`${what[k]} changed to "${label(form[k])}"${why ? ` because ${why}` : ''}.`);
+    }
+    if (team) notes.push(`${mName} counts the regiment as a whole, so the Company, Rank and Person filters are off and battalion, company and rank are greyed out.`);
+    if (form.x.value === 'battalion' || form.split.value === 'battalion') notes.push('Battalions only count A and B Company (1st Battalion) and C and D Company (2nd Battalion).');
+    if (changed) changeNotes = notes;
+    else changeNotes = notes.filter((n) => !n.includes(' changed to '));
     for (const n of document.querySelectorAll('.bd-measure-note')) n.textContent = NOTES[form.measure.value] ?? '';
+    let box = document.querySelector('.bd-conflict');
+    const note = document.querySelector('.bd-measure-note');
+    if (!box && note) { box = document.createElement('p'); box.className = 'mb-note bd-conflict'; box.setAttribute('role', 'status'); note.after(box); }
+    if (box) { box.textContent = changeNotes.join(' '); box.hidden = !changeNotes.length; }
   }
 
   function describe(cfg) {
@@ -132,9 +181,10 @@
     year: (r) => r.date.slice(0, 4),
     day: (r) => r.day,
     company: (r) => r.company,
+    battalion: (r) => window.LA.battalionOf(r.company),
     rank: (r) => r.rank || 'No rank',
   };
-  const sKey = { none: () => 'All', kind: (r) => kindName[r.kind], company: (r) => r.company, day: (r) => r.day, rank: (r) => r.rank || 'No rank', result: (r) => RESULT_NAMES[r.res] ?? 'No score' };
+  const sKey = { none: () => 'All', kind: (r) => kindName[r.kind], company: (r) => r.company, battalion: (r) => window.LA.battalionOf(r.company), day: (r) => r.day, rank: (r) => r.rank || 'No rank', result: (r) => RESULT_NAMES[r.res] ?? 'No score' };
   const scoreOf = (s) => { const m = s ? String(s).match(/^\s*(\d+)\s*[-–:]\s*(\d+)/) : null; return m ? (+m[1] > +m[2] ? 'W' : +m[1] < +m[2] ? 'L' : 'D') : null; };
   const isMilestone = (n) => n === 10 || n === 25 || n === 75 || (n >= 50 && n % 50 === 0);
 
@@ -178,7 +228,8 @@
       if (p.kind !== 'all' && r0.kind !== p.kind) continue;
       const day = DAYS[new Date(r0.date + 'T00:00:00Z').getUTCDay()];
       if (p.day !== 'all' && day !== p.day) continue;
-      if (!team && cfg.company && cfg.company !== 'all' && r0.company !== cfg.company) continue;
+      if (!team && cfg.company && cfg.company !== 'all' && !window.LA.inGroup(r0.company, cfg.company)) continue;
+      if ((cfg.x === 'battalion' || cfg.split === 'battalion') && !window.LA.battalionOf(r0.company)) continue;
       if (!team && cfg.rank && cfg.rank !== 'all' && r0.rank !== cfg.rank) continue;
       if (!team && cfg.person && r0.name.toLowerCase() !== cfg.person.toLowerCase()) continue;
       rs.push({ ...r0, day });
@@ -204,7 +255,7 @@
       if (['attended', 'fresh', 'joined', 'promos', 'milestones', 'results'].includes(measure)) return c.n;
       if (measure === 'share') return Math.round(c.n / xTotal.get(c.x) * 1000) / 10;
       if (measure === 'winrate') return c.decided ? Math.round(c.wins / c.decided * 1000) / 10 : null;
-      const denom = cfg.split === 'company' ? xPosts.get(c.x).size : c.posts.size;
+      const denom = cfg.split === 'company' || cfg.split === 'battalion' ? xPosts.get(c.x).size : c.posts.size;
       return Math.round(c.n / denom * 10) / 10;
     };
     let xs = [...new Set([...cells.values()].map((c) => c.x))];
@@ -274,7 +325,7 @@
     if (cfg.x === 'quarter') { opts.catLabel = qLabel; opts.tipTitle = (q) => `${q.slice(5)} ${q.slice(0, 4)}`; }
     if (cfg.x === 'year') { opts.catLabel = (y) => y; opts.tipTitle = (y) => y; }
     if (cfg.x === 'day') { opts.catLabel = (d, bw) => (bw < 34 ? d.slice(0, 2) : d.slice(0, 3)); opts.tipTitle = (d) => d + 's'; }
-    if (cfg.x === 'company') { opts.catLabel = (c) => c; opts.tipTitle = (c) => c; }
+    if (cfg.x === 'company' || cfg.x === 'battalion') { opts.catLabel = (c) => c; opts.tipTitle = (c) => c; }
     if (cfg.type === 'line') lineChart(el, a.xs, a.series, opts);
     else if (cfg.type === 'dots') lineChart(el, a.xs, a.series, { ...opts, dots: true, noLine: true });
     else barChart(el, a.xs, a.series, opts);
@@ -318,6 +369,7 @@
     mine.forEach((cfg, idx) => {
       const card = document.createElement('div');
       card.className = 'la-card';
+      card.dataset.hideKey = 'saved-' + (cfg.id || idx);
       const head = document.createElement('div');
       head.className = 'bd-card-head';
       const h = document.createElement('h3');
@@ -383,7 +435,11 @@
     if (!r || filled) return;
     filled = true;
     const want = form.company.dataset.want || 'all';
-    form.company.replaceChildren(new Option('All companies', 'all'), ...companiesIn(r).map((c) => new Option(c, c)));
+    const bn = document.createElement('optgroup'); bn.label = 'Battalions';
+    bn.append(...window.LA.BATTALIONS.map((x) => new Option(window.LA.battalionLabel(x), x)));
+    const co = document.createElement('optgroup'); co.label = 'Companies';
+    co.append(...companiesIn(r).map((c) => new Option(c, c)));
+    form.company.replaceChildren(new Option('All companies', 'all'), bn, co);
     form.company.value = want;
     const ranks = [...new Set(r.map((x) => x.rank).filter(Boolean))].sort((a, z) => (window.LA?.rankOrder(z) ?? 0) - (window.LA?.rankOrder(a) ?? 0));
     const wantRank = form.rank.dataset.want || 'all';

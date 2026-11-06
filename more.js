@@ -119,7 +119,7 @@
     new MutationObserver(() => applySort(table)).observe(table.tBodies[0], { childList: true });
   }
   document.addEventListener('DOMContentLoaded', () => {
-    for (const t of document.querySelectorAll('#recruits table:not(.mb-retention), #results table, #milestones table, #promotions table, #check table, #company-card table')) makeSortable(t);
+    for (const t of document.querySelectorAll('#recruits table:not(.mb-retention), #results table, #milestones table, #promotions table, #check table, #company-card table, #awards table')) makeSortable(t);
   });
 
   // ---------- data as of ----------
@@ -853,7 +853,7 @@
     ['Overview', ['regiment']],
     ['Events', ['results', 'patterns']],
     ['Companies', ['companies']],
-    ['Members', ['people', 'recruits', 'promotions', 'milestones']],
+    ['Members', ['people', 'recruits', 'promotions', 'milestones', 'awards']],
     ['Tools', ['check', 'compare', 'builder', 'checks']],
   ];
   const sectionOf = (tab) => SECTIONS.find(([, t]) => t.includes(tab)) ?? SECTIONS[0];

@@ -4,12 +4,14 @@ Static site showing attendance for the 6th Louisiana's events and drills, counte
 
 - `index.html` – the page (charts, tables, filters)
 - `dash-shim.js` – loads the data files and runs the page's charts
+- `awards.js` – site-only: Discord roles and awards on member profiles and the Awards page
 - `builder.js` – site-only extras: choose which charts show, build your own charts
 - `tools/site_extras.py` – rebuilds `index.html` from the Claude dashboard page
 - `d3.min.js` – d3 7.9.0, bundled so the site needs no outside scripts
 - `data/attendance.json` – one row per name per post: `{post, date, kind, company, name}`
 - `data/name-review.json` – names that didn't match exactly one member
+- `data/roles.json` – Discord roles snapshot: `{asof, roles: [{role, group, people}], people: {name: [role index]}}`
 
-To update the numbers, replace the two files in `data/` and push. GitHub Pages republishes on its own.
+To update the numbers, replace the files in `data/` and push. GitHub Pages republishes on its own.
 
 Currently showing made-up sample data.

@@ -471,6 +471,7 @@ head = '''<!doctype html>
 foot = '''
 <script src="builder.js"></script>
 <script src="members.js"></script>
+<script src="awards.js"></script>
 <script src="more.js"></script>
 <footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
 </main>
@@ -513,7 +514,7 @@ for a, b in REAL:
 import hashlib, os
 out = head + page + foot
 root = os.path.dirname(os.path.abspath(sys.argv[2]))
-for f in ['site.css', 'd3.min.js', 'dash-shim.js', 'builder.js', 'members.js', 'more.js']:
+for f in ['site.css', 'd3.min.js', 'dash-shim.js', 'builder.js', 'members.js', 'awards.js', 'more.js']:
     v = hashlib.sha1(open(os.path.join(root, f), 'rb').read()).hexdigest()[:8]
     for attr in ('href', 'src'):
         out = out.replace(f'{attr}="{f}"', f'{attr}="{f}?v={v}"')

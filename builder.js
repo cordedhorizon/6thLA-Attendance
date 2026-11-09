@@ -563,6 +563,22 @@
   document.addEventListener('keydown', (ev) => {
     if (ev.key === 'Escape') for (const d of document.querySelectorAll('.bd-choose[open]')) d.open = false;
   });
+  // The menu opens from the button's left edge, and slides back left only as far as it needs
+  // to stay on screen, wherever the button sits in the filter bar.
+  function placeChooser(d) {
+    const p = d.querySelector('.bd-choose-panel');
+    if (!p) return;
+    p.style.left = '0px';
+    const r = p.getBoundingClientRect(), vw = document.documentElement.clientWidth, gap = 16;
+    let shift = 0;
+    if (r.right > vw - gap) shift = vw - gap - r.right;
+    if (r.left + shift < gap) shift = gap - r.left;
+    p.style.left = shift + 'px';
+  }
+  document.addEventListener('toggle', (ev) => {
+    if (ev.target.matches?.('.bd-choose') && ev.target.open) placeChooser(ev.target);
+  }, true);
+  window.addEventListener('resize', () => { for (const d of document.querySelectorAll('.bd-choose[open]')) placeChooser(d); });
 
   document.addEventListener('DOMContentLoaded', () => {
     syncForm();

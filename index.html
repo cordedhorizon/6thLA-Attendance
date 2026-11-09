@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
-<link rel="stylesheet" href="site.css?v=854fb017">
+<link rel="stylesheet" href="site.css?v=87485b26">
 <script src="d3.min.js?v=6d64bd2f"></script>
 <script src="dash-shim.js?v=d2fb0a0d"></script>
 </head>
@@ -937,19 +937,25 @@ function makeTip(el) {
 }
 
 function xLabels(months, x, svg, H, step) {
-  let lastX = -Infinity;
+  // Pick the labels first, then place them by priority: January (a year starting) beats the
+  // first point's label, which beats the rest, so a year that starts on the chart is never dropped.
+  const short = months.length <= 14;
+  const want = [];
   months.forEach((m, i) => {
     const isJan = m.endsWith('-01');
-    const short = months.length <= 14;
     if (!(short || i === 0 || isJan || (step && i % step === 0))) return;
     const label = !short ? (isJan || i === 0 ? m.slice(0, 4) : null)
       : isJan || i === 0 ? d3.utcFormat('%b %Y')(monthParse(m)) : d3.utcFormat('%b')(monthParse(m));
     if (!label) return;
     const px = x(m);
-    if (px - lastX < label.length * 7 + 8) return;
-    lastX = px;
-    svg.append('text').attr('x', px).attr('y', H - 4).text(label);
+    want.push({ px, label, rank: isJan ? 0 : i === 0 ? 1 : 2, w: label.length * 7 + 8 });
   });
+  const placed = [];
+  for (const c of [...want].sort((a, b) => a.rank - b.rank || a.px - b.px)) {
+    if (placed.some((p) => c.px < p.px + p.w && p.px < c.px + c.w)) continue;
+    placed.push(c);
+  }
+  for (const c of placed.sort((a, b) => a.px - b.px)) svg.append('text').attr('x', c.px).attr('y', H - 4).text(c.label);
 }
 
 function labelCats(cats, xAt, svg, H, label) {
@@ -1529,7 +1535,7 @@ dash.draw('multi-rows', (tb) => {
 });
 </script>
 
-<script src="builder.js?v=d68aa846"></script>
+<script src="builder.js?v=491c5a80"></script>
 <script src="members.js?v=7269bc6e"></script>
 <script src="awards.js?v=cf0c1a62"></script>
 <script src="more.js?v=60fda83e"></script>

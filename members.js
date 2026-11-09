@@ -166,7 +166,48 @@
   }
 
   // ---------- find a member and member profiles ----------
+  // Closing a member's card (or pressing Back) returns to the tab and spot it was opened from.
+  let cameFrom = null;
+  const openTab = () => document.querySelector('.la-page:not([hidden])')?.id ?? null;
+  function rememberSpot() {
+    if (!document.getElementById('person')?.hidden) return; // already open: keep the first spot
+    const tab = openTab();
+    const page = tab && document.getElementById(tab);
+    cameFrom = tab && {
+      tab,
+      y: window.scrollY,
+      boxes: page ? [...page.querySelectorAll('.la-tablebox')].map((b) => [b.scrollTop, b.scrollLeft]) : [],
+    };
+  }
+  function returnToSpot(spot) {
+    const go = () => {
+      window.scrollTo(0, spot.y);
+      const page = document.getElementById(spot.tab);
+      if (page) [...page.querySelectorAll('.la-tablebox')].forEach((b, i) => { if (spot.boxes[i]) [b.scrollTop, b.scrollLeft] = spot.boxes[i]; });
+    };
+    // After the page has redrawn, and once more in case a late drawing changed its height.
+    requestAnimationFrame(() => requestAnimationFrame(() => { go(); setTimeout(go, 120); }));
+  }
+  document.addEventListener('click', (ev) => {
+    if (ev.target.closest?.('.la-people tr[data-key]')) rememberSpot();
+    if (!ev.target.closest?.('#person .la-close') || !cameFrom) return;
+    const spot = cameFrom;
+    if (spot.tab !== 'people') showTab(spot.tab); // the card closes on its own as the person is cleared
+    else { cameFrom = null; returnToSpot(spot); }
+  }, true);
+  const showTabBeforeSpot = window.showTab;
+  window.showTab = function (name, link) {
+    const spot = cameFrom;
+    if (name !== 'people') cameFrom = null;
+    showTabBeforeSpot(name, link);
+    if (spot && name !== 'people' && name === spot.tab) {
+      dash.setParams({ person: null });
+      returnToSpot(spot);
+    }
+  };
+
   function openPerson(name) {
+    rememberSpot();
     showTab('people');
     dash.setParams({ person: name });
     requestAnimationFrame(() => { for (const p of document.querySelectorAll('#person')) p.scrollIntoView({ block: 'start', behavior: 'smooth' }); });

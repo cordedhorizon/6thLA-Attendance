@@ -689,6 +689,18 @@
   const KEYS = ['period', 'from', 'to', 'day', 'kind', 'grain', 'person', 'co', 'cmp', 'ca', 'cb', 'g1', 'g2', 'p1f', 'p1t', 'p2f', 'p2t'];
   const ONLY_ON = { person: 'people', co: 'companies', cmp: 'compare', ca: 'compare', cb: 'compare', g1: 'compare', g2: 'compare', p1f: 'compare', p1t: 'compare', p2f: 'compare', p2t: 'compare' };
   dash.setLink = () => {}; // the page's own tab links are replaced by the fuller ones below
+  // Each address matches its buttons: section, then sub-tab when the section has more than one.
+  // Old addresses (the page ids, e.g. #regiment, #builder) still open and are swapped for the new ones.
+  const ROUTES = {
+    regiment: 'overview',
+    results: 'events/results', patterns: 'events/days-and-calendar',
+    companies: 'companies',
+    people: 'members/people', recruits: 'members/recruits', promotions: 'members/promotions', milestones: 'members/milestones', awards: 'members/awards',
+    check: 'tools/attendance-check', compare: 'tools/compare', builder: 'tools/build-a-chart', checks: 'tools/name-checks',
+  };
+  const TAB_OF = Object.fromEntries(Object.entries(ROUTES).map(([t, r]) => [r, t]));
+  const OLD = { person: 'people', events: 'results', tools: 'check', members: 'people' };
+  const routeOf = (tab) => ROUTES[tab] ?? tab;
   function wantHash() {
     const p = dash.params();
     const tab = currentTab();
@@ -704,7 +716,7 @@
       q.set(k, v);
     }
     const s = q.toString();
-    return '#' + tab + (s ? '&' + s : '');
+    return '#' + routeOf(tab) + (s ? '&' + s : '');
   }
   let lastTab = null;
   let applying = false;
@@ -729,8 +741,11 @@
   function applyHash() {
     const h = location.hash.slice(1);
     if (!h || h.startsWith('chart=') || h.startsWith('person=')) return false;
-    const [tab, rest] = [h.split('&')[0], h.split('&').slice(1).join('&')];
-    if (!tabs.includes(tab)) return false;
+    const [route, rest] = [decodeURIComponent(h.split('&')[0]).toLowerCase(), h.split('&').slice(1).join('&')];
+    const tab = TAB_OF[route] ?? (tabs.includes(route) ? route : OLD[route]);
+    if (!tab || !tabs.includes(tab)) return false;
+    // An old or differently written address: swap it for the new one in place, so Back skips it.
+    if (route !== routeOf(tab) || h.split('&')[0] !== route) history.replaceState(null, '', '#' + routeOf(tab) + (rest ? '&' + rest : ''));
     const q = new URLSearchParams(rest);
     const next = {};
     for (const k of KEYS) next[k] = q.get(k);

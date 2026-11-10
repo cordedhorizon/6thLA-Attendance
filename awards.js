@@ -72,7 +72,8 @@
           <select id="aw-co" class="mb-select" aria-label="Company"><option value="">Whole regiment</option></select>
         </div>
         <div class="la-tablebox">
-          <table class="la-table">
+          <table class="la-table aw-table">
+            <colgroup><col class="aw-c-role"><col class="aw-c-type"><col class="aw-c-n"><col></colgroup>
             <thead><tr><th>Award or role</th><th>Type</th><th class="la-n">Members</th><th>Who</th></tr></thead>
             <tbody data-draw="aw-rows"></tbody>
           </table>
@@ -126,7 +127,11 @@
     if (R) p.textContent = `Medals, ribbons, badges and positions held by members who appear in attendance, from the Discord server's roles as of ${asof()}. Roles carry no dates, so the period picked doesn't change this page. Members who have left the server aren't listed.`;
   });
 
+  // Which "Show all" lists are open, so a redraw (or coming back from a member's card) keeps them open.
+  const openLists = new Set();
   dash.draw('aw-rows', (tb) => {
+    const box = tb.closest('.la-tablebox');
+    const keep = box && [box.scrollTop, box.scrollLeft];
     tb.replaceChildren();
     if (!R || !LA.all()) return LA.emptyRow(tb, 4, 'Loading…');
     const { group, co } = picked();
@@ -150,6 +155,8 @@
       else if (names.length <= 8) for (const x of names) who.append(nameLink(x), ' ');
       else {
         const det = el('details', 'mb-more');
+        det.open = openLists.has(r.role);
+        det.addEventListener('toggle', () => { if (det.open) openLists.add(r.role); else openLists.delete(r.role); });
         det.append(el('summary', null, `Show all ${names.length}`));
         const wrap = el('div', 'aw-names');
         for (const x of names) wrap.append(nameLink(x), ' ');
@@ -159,6 +166,21 @@
       tb.append(tr);
     });
     if (!shown) LA.emptyRow(tb, 4, 'Nothing of this type.');
+    if (keep) [box.scrollTop, box.scrollLeft] = keep;
+  });
+  // Opening or closing a list leaves its "Show all" link where it was on screen.
+  document.addEventListener('click', (ev) => {
+    const sm = ev.target.closest?.('#awards-list .mb-more > summary');
+    if (!sm) return;
+    const box = sm.closest('.la-tablebox');
+    const top = sm.getBoundingClientRect().top;
+    requestAnimationFrame(() => {
+      const moved = sm.getBoundingClientRect().top - top;
+      if (!moved) return;
+      if (box) box.scrollTop += moved;
+      const left = sm.getBoundingClientRect().top - top;
+      if (left) window.scrollBy(0, left);
+    });
   });
 
   dash.draw('aw-top', (tb) => {

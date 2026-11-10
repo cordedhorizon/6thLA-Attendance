@@ -190,4 +190,10 @@ tr[data-post] { cursor: pointer; }
 .aw-ribbon { border-color: color-mix(in srgb, var(--series-2) 55%, var(--color-border-line)); }
 .aw-badge { border-color: color-mix(in srgb, var(--series-3) 55%, var(--color-border-line)); }
 .aw-names { padding-top: 4px; }
+/* Fixed column widths, so opening a long list never re-wraps the rows around it. */
+.aw-table { table-layout: fixed; min-width: 36rem; }
+.aw-table .aw-c-role { width: 28%; }
+.aw-table .aw-c-type { width: 6.5rem; }
+.aw-table .aw-c-n { width: 6rem; }
+.aw-table td { vertical-align: top; overflow-wrap: anywhere; }
 #awards td .mb-name { margin-right: 2px; }

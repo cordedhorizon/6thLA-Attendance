@@ -55,35 +55,42 @@
   let hidden = new Set(load(STORE_HIDDEN, []));
   function applyHidden() { for (const c of cards()) c.hidden = hidden.has(c.id); }
 
+  // The menu lists only the charts on the tab you're looking at, and hides itself on tabs with none.
+  const currentPage = () => document.querySelector('.la-page:not([hidden])');
   function buildChooser() {
+    const page = currentPage();
+    const own = page ? cards().filter((c) => c.closest('.la-page') === page) : [];
+    for (const d of document.querySelectorAll('.bd-choose')) {
+      if (!own.length) d.open = false;
+      d.hidden = !own.length;
+    }
     for (const list of document.querySelectorAll('.bd-choose-list')) {
       list.replaceChildren();
-      for (const page of document.querySelectorAll('.la-page')) {
-        const own = cards().filter((c) => c.closest('.la-page') === page);
-        if (!own.length) continue;
-        const head = document.createElement('div');
-        head.className = 'bd-choose-head';
-        head.textContent = document.querySelector(`[data-tab="${page.id}"]`)?.textContent ?? page.id;
-        list.append(head);
-        for (const c of own) {
-          const label = document.createElement('label');
-          const box = document.createElement('input');
-          box.type = 'checkbox';
-          box.id = 'show-' + c.id;
-          box.checked = !hidden.has(c.id);
-          box.addEventListener('change', () => {
-            if (box.checked) hidden.delete(c.id); else hidden.add(c.id);
-            save(STORE_HIDDEN, [...hidden]);
-            applyHidden();
-          });
-          label.append(box, document.createTextNode(c.querySelector('h2').textContent));
-          list.append(label);
-        }
+      for (const c of own) {
+        const label = document.createElement('label');
+        const box = document.createElement('input');
+        box.type = 'checkbox';
+        box.id = 'show-' + c.id;
+        box.checked = !hidden.has(c.id);
+        box.addEventListener('change', () => {
+          if (box.checked) hidden.delete(c.id); else hidden.add(c.id);
+          save(STORE_HIDDEN, [...hidden]);
+          applyHidden();
+        });
+        label.append(box, document.createTextNode(c.querySelector('h2').textContent));
+        list.append(label);
       }
     }
   }
+  // "Show all charts" brings back the hidden charts on this tab only.
   for (const b of document.querySelectorAll('.bd-show-all')) {
-    b.addEventListener('click', () => { hidden = new Set(); save(STORE_HIDDEN, []); applyHidden(); buildChooser(); });
+    b.addEventListener('click', () => {
+      const page = currentPage();
+      for (const c of cards()) if (c.closest('.la-page') === page) hidden.delete(c.id);
+      save(STORE_HIDDEN, [...hidden]);
+      applyHidden();
+      buildChooser();
+    });
   }
 
   // ---------- chart builder ----------
@@ -545,7 +552,7 @@
     else if (filters.parentElement !== filtersHome) filtersHome.append(filters);
   }
   const pageShowTab = window.showTab;
-  window.showTab = function (name, link) { pageShowTab(name, link); placeFilters(name); };
+  window.showTab = function (name, link) { pageShowTab(name, link); placeFilters(name); buildChooser(); };
 
   // A shared link opens the builder with that chart loaded.
   function openShared() {
@@ -576,7 +583,7 @@
     p.style.left = shift + 'px';
   }
   document.addEventListener('toggle', (ev) => {
-    if (ev.target.matches?.('.bd-choose') && ev.target.open) placeChooser(ev.target);
+    if (ev.target.matches?.('.bd-choose') && ev.target.open) { buildChooser(); placeChooser(ev.target); }
   }, true);
   window.addEventListener('resize', () => { for (const d of document.querySelectorAll('.bd-choose[open]')) placeChooser(d); });
 

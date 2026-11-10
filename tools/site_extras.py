@@ -75,7 +75,7 @@ rep('''    <div class="la-filters">
         <div class="bd-choose-panel">
           <p>Untick a chart to hide it. Your choice is saved in this browser.</p>
           <div class="bd-choose-list"></div>
-          <button type="button" class="bd-small bd-show-all">Show all charts</button>
+          <button type="button" class="bd-small bd-show-all">Show all charts on this tab</button>
         </div>
       </details>
 ''')

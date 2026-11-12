@@ -27,10 +27,11 @@
   --cds-pad-xs: 4px; --cds-pad-sm: 8px; --cds-pad-md: 14px; --cds-pad-lg: 18px; --cds-pad-xl: 28px;
   --cds-radius: 6px;
   --cds-dur-slow: .3s;
+  --scroll-shadow: rgb(0 0 0 / .10);
   color-scheme: light;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
+/* Dark is the default; the header button switches to light and remembers it in this browser. */
+:root:not([data-theme="light"]) {
     --color-bg: #16181b; --color-panel: #1e2125; --color-fg: #e8e6e1; --color-fg-muted: #a3a6ab; --color-border-line: #33373d;
     --color-ok: #6cc28a; --color-warn: #e0a84a; --color-bad: #ef7a6a;
     --series-1: #7fa8d6; --series-2: #e3a161; --series-3: #8fbf85; --series-4: #c58fb8;
@@ -38,8 +39,8 @@
     --series-9: #c3dcf5; --series-10: #b08a66; --series-11: #f0a8cf; --series-12: #d3d7db;
     --cds-chart-muted: #5b5f66; --cds-chart-grid: #2a2e33; --cds-chart-axis: #4b5058; --cds-chart-reference: #7a7f87;
     --cds-surface-popover: #262a2f; --cds-border: #3a3f46; --cds-shadow-popover: 0 4px 16px rgb(0 0 0 / .45); --cds-text-secondary: #a3a6ab;
+    --scroll-shadow: rgb(0 0 0 / .45);
     color-scheme: dark;
-  }
 }
 html, body { margin: 0; background: var(--color-bg); color: var(--color-fg); }
 body { font-family: var(--font-anthropic-sans); font-size: var(--cds-font-size-body); line-height: 1.45; -webkit-text-size-adjust: 100%; }
@@ -222,8 +223,8 @@ tr[data-post] { cursor: pointer; }
   background:
     linear-gradient(to right, var(--color-panel) 30%, transparent) left center / 28px 100% no-repeat local,
     linear-gradient(to left, var(--color-panel) 30%, transparent) right center / 28px 100% no-repeat local,
-    linear-gradient(to right, rgb(0 0 0 / .10), transparent) left center / 10px 100% no-repeat scroll,
-    linear-gradient(to left, rgb(0 0 0 / .10), transparent) right center / 10px 100% no-repeat scroll;
+    linear-gradient(to right, var(--scroll-shadow), transparent) left center / 10px 100% no-repeat scroll,
+    linear-gradient(to left, var(--scroll-shadow), transparent) right center / 10px 100% no-repeat scroll;
 }
 .la-table tbody tr:last-child td { border-bottom: 0; }
 .la-table tbody tr[data-post]:hover, .mb-company-rows tr:hover { background: var(--color-bg); }
@@ -249,3 +250,5 @@ tr[data-post] { cursor: pointer; }
   .la .la-tabs button, .la .la-seg button { padding: 7px 10px; }
   .la-filters select, .la-search, .mb-select, .bd-choose summary, .bd-small, .la-close, .bd-dates input { min-height: 36px; }
 }
+.mb-theme { margin-left: auto; }
+@media (max-width: 560px) { .mb-theme { margin-left: 0; } }

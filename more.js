@@ -975,3 +975,21 @@
   document.addEventListener('DOMContentLoaded', fix);
   dash.onData(() => requestAnimationFrame(fix));
 })();
+
+// ---------- light and dark mode (dark unless picked) ----------
+(function () {
+  const b = document.querySelector('.mb-theme');
+  if (!b) return;
+  const show = () => {
+    const light = document.documentElement.dataset.theme === 'light';
+    b.textContent = light ? 'Dark mode' : 'Light mode';
+    b.setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode');
+  };
+  b.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('la-theme', next); } catch { /* private window: lasts this visit only */ }
+    show();
+  });
+  show();
+})();

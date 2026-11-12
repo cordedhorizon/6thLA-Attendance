@@ -30,6 +30,7 @@ rep('''  </header>
       <datalist id="all-members"></datalist>
       <p class="mb-asof" data-draw="mb-asof"></p>
       <p class="mb-asof">Site updated __BUILD__</p>
+      <button type="button" class="bd-small mb-theme">Light mode</button>
     </div>
   </header>
 ''')
@@ -461,6 +462,7 @@ head = '''<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('la-theme') === 'light' ? 'light' : 'dark'; } catch { document.documentElement.dataset.theme = 'dark'; }</script>
 <link rel="stylesheet" href="site.css">
 <script src="d3.min.js"></script>
 <script src="dash-shim.js"></script>

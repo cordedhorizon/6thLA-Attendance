@@ -342,6 +342,10 @@
       const firstOfYear = new Set();
       let lastYear = null;
       for (const p of a.xs) { const yr = info.get(p).date.slice(0, 4); if (yr !== lastYear) { firstOfYear.add(p); lastYear = yr; } }
+      // A few points from the tail of a year at the very start would collide with the next year's
+      // label and knock it out, so the year that actually fills the chart keeps its label instead.
+      const starts = a.xs.filter((p) => firstOfYear.has(p));
+      if (starts.length > 1 && a.xs.indexOf(starts[1]) / a.xs.length < 0.08) firstOfYear.delete(starts[0]);
       opts.catLabel = (p) => (firstOfYear.has(p) ? info.get(p).date.slice(0, 4) : null);
       opts.tipTitle = (p) => `${info.get(p).day} ${dayName(info.get(p).date)}`;
       opts.connect = true;

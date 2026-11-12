@@ -10,6 +10,7 @@
   --color-bad: #b23b2e;
   --series-1: #2f5d8a; --series-2: #c0782d; --series-3: #4f7d4a; --series-4: #8a4f7d;
   --series-5: #8c7a3a; --series-6: #2f8a8a; --series-7: #a34a3a; --series-8: #5a5a8a;
+  --series-9: #6f9bc4; --series-10: #7a5a3c; --series-11: #c26a9a; --series-12: #3d4a52;
   --cds-chart-muted: #b7b4ac;
   --cds-chart-grid: #e6e3db;
   --cds-chart-axis: #a9a59b;
@@ -34,6 +35,7 @@
     --color-ok: #6cc28a; --color-warn: #e0a84a; --color-bad: #ef7a6a;
     --series-1: #7fa8d6; --series-2: #e3a161; --series-3: #8fbf85; --series-4: #c58fb8;
     --series-5: #cdb875; --series-6: #6fc4c4; --series-7: #e08a78; --series-8: #a3a3d6;
+    --series-9: #c3dcf5; --series-10: #b08a66; --series-11: #f0a8cf; --series-12: #d3d7db;
     --cds-chart-muted: #5b5f66; --cds-chart-grid: #2a2e33; --cds-chart-axis: #4b5058; --cds-chart-reference: #7a7f87;
     --cds-surface-popover: #262a2f; --cds-border: #3a3f46; --cds-shadow-popover: 0 4px 16px rgb(0 0 0 / .45); --cds-text-secondary: #a3a6ab;
     color-scheme: dark;
@@ -123,7 +125,7 @@ input.mb-nomatch { border-color: var(--color-bad) !important; }
 .mb-chip button { font: inherit; border: 0; background: none; color: var(--color-fg-muted); cursor: pointer; padding: 0 4px; line-height: 1; font-size: 1rem; }
 .mb-summary { margin: 0; font-size: var(--cds-font-size-body) !important; color: var(--color-fg) !important; }
 .la-card.mb-has-csv { position: relative; }
-.la-card.mb-has-csv > .mb-csv { position: absolute; top: var(--cds-pad-md); right: var(--cds-pad-md); }
+.la-card.mb-has-csv > .mb-csv { position: absolute; top: var(--cds-pad-lg); right: var(--cds-pad-lg); }
 .la-card.mb-has-csv > h2 { padding-right: 8.5rem; }
 @media (max-width: 480px) {
   .la-card.mb-has-csv > .mb-csv { position: static; align-self: flex-start; order: 1; }
@@ -197,3 +199,52 @@ tr[data-post] { cursor: pointer; }
 .aw-table .aw-c-n { width: 6rem; }
 .aw-table td { vertical-align: top; overflow-wrap: anywhere; }
 #awards td .mb-name { margin-right: 2px; }
+
+/* ---------- Design pass: one look across every tab ---------- */
+/* The note about where the numbers come from sits with the footer, so the page opens on its title. */
+.la-sample { order: 99; }
+.mb-find { margin-bottom: var(--cds-gap-xs); }
+/* Tiles: no placeholder dash under a figure, and figures line up along the top. */
+.la-delta.mb-blank { display: none; }
+.la-tile { justify-content: flex-start; }
+/* Controls share one height and hover look. */
+.la-filters select, .la-search, .mb-select, .bd-choose summary, .bd-small, .la-close, .bd-dates input { min-height: 30px; box-sizing: border-box; }
+.bd-small:hover, .la-close:hover, .bd-choose summary:hover { border-color: var(--color-fg-muted); }
+.la-tabs button:hover, .la-seg button:hover { color: var(--color-fg); }
+.bd-primary:hover { filter: brightness(1.08); }
+/* Forms: fields line up along the bottom even when one label wraps, and long choices are not cut off. */
+.bd-form { align-items: end; }
+@media (min-width: 900px) { .bd-form label[for="bd-measure"] { grid-column: span 2; } }
+/* Tables: dates and names stay on one line and the table scrolls sideways instead, with a soft edge showing there is more. */
+.la-table td { white-space: nowrap; }
+.la-table.aw-table td, .la-table td.mb-wrap { white-space: normal; }
+.la-tablebox {
+  background:
+    linear-gradient(to right, var(--color-panel) 30%, transparent) left center / 28px 100% no-repeat local,
+    linear-gradient(to left, var(--color-panel) 30%, transparent) right center / 28px 100% no-repeat local,
+    linear-gradient(to right, rgb(0 0 0 / .10), transparent) left center / 10px 100% no-repeat scroll,
+    linear-gradient(to left, rgb(0 0 0 / .10), transparent) right center / 10px 100% no-repeat scroll;
+}
+.la-table tbody tr:last-child td { border-bottom: 0; }
+.la-table tbody tr[data-post]:hover, .mb-company-rows tr:hover { background: var(--color-bg); }
+/* Compare with nothing picked: just the prompt. */
+.la-card.mb-is-empty .mb-csv, .la-card.mb-is-empty .la-tablebox, .la-card.mb-is-empty .la-chart, .la-card.mb-is-empty .la-legend, .la-card.mb-is-empty .mb-h4 { display: none; }
+/* The zoom tip is about a mouse and keyboard. */
+@media (hover: none), (pointer: coarse) { .la-zoomhint { display: none; } }
+/* Phones */
+@media (max-width: 560px) {
+  .la .la-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; box-sizing: border-box; }
+  .la .la-tabs::-webkit-scrollbar { display: none; }
+  .la .la-tabs button { white-space: nowrap; flex: 0 0 auto; }
+  .la .la-bar > .la-filters { width: 100%; }
+  .la .la-filters select { flex: 1 1 7rem; min-width: 0; }
+  .la .la-filters .la-seg { flex: 1 1 100%; }
+  .la .la-filters .la-seg button { flex: 1 1 auto; }
+  .la .la-card { padding: var(--cds-pad-md); }
+  .la .la-tablebox { max-height: 28rem; }
+  .aw-table { min-width: 30rem; }
+}
+@media (pointer: coarse) {
+  .la .la-tabs button, .la .la-seg button { padding: 7px 10px; }
+  .la-filters select, .la-search, .mb-select, .bd-choose summary, .bd-small, .la-close, .bd-dates input { min-height: 36px; }
+}

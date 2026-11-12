@@ -427,6 +427,7 @@
     box.replaceChildren();
     const c = compareData();
     box.classList.toggle('dash-skeleton', !c);
+    box.closest('.la-card')?.classList.toggle('mb-is-empty', !!c?.empty);
     if (!c || c.empty) return;
     const p = P();
     if (c.mode === 'people') {
@@ -676,6 +677,9 @@
       }
       scroll.append(wrap);
     }
+    // On a narrow screen the year scrolls sideways: start at the latest months, then keep the reader's place.
+    scroll.scrollLeft = box._calLeft ?? scroll.scrollWidth;
+    scroll.addEventListener('scroll', () => { box._calLeft = scroll.scrollLeft; }, { passive: true });
   });
 
   // ---------- top controls on the new tab ----------
@@ -918,7 +922,15 @@
     // Only touch 'hidden' when it changes, or the observer below would keep firing.
     for (const b of row.querySelectorAll('[data-tab]')) { const h = !ts.includes(b.dataset.tab); if (b.hidden !== h) b.hidden = h; }
     if (row.hidden !== ts.length < 2) row.hidden = ts.length < 2;
+    const on = row.querySelector(`[data-tab="${name}"]`);
+    if (on && row.scrollWidth > row.clientWidth) {
+      const a = on.offsetLeft - row.offsetLeft, z = a + on.offsetWidth;
+      if (a < row.scrollLeft || z > row.scrollLeft + row.clientWidth) row.scrollLeft = Math.max(0, a - 24);
+    }
   }
+  // A tile's change-from-last-year line is only a dash unless one year is picked: hide it then.
+  const blankDeltas = () => { for (const d of document.querySelectorAll('.la-delta')) d.classList.toggle('mb-blank', d.textContent.trim() === '—'); };
+  dash.onData(() => requestAnimationFrame(blankDeltas));
   const prev = window.showTab;
   window.showTab = function (name, link) { prev(name, link); fit(name); };
   fit(document.querySelector('.la-page:not([hidden])')?.id || 'regiment');

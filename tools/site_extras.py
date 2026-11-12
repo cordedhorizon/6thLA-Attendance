@@ -364,7 +364,7 @@ rep('''</div>
 dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabpanel" aria-labelledby="tab-builder" hidden>
     <div class="la-card" id="builder-form">
       <h2>Build a chart</h2>
-      <p>Chart almost anything on the site: attendance, first-timers, recruits joining, promotions, milestones and results. Pick what to show and how to break it down, then narrow it with the period and filters below. Charts you add appear here and at the bottom of the Regiment tab, saved in this browser. Use Copy link to share one.</p>
+      <p>Chart almost anything on the site: attendance, first-timers, recruits joining, promotions, milestones and results. Pick what to show and how to break it down, then narrow it with the period and filters below. Charts you add appear here and at the bottom of the Overview tab, saved in this browser. Use Copy link to share one.</p>
       <div class="bd-form">
         <label for="bd-measure">Show
           <select id="bd-measure">
@@ -439,7 +439,7 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
       <div class="la-chart" data-draw="bd-preview"></div>
       <div class="bd-actions">
         <button type="button" id="bd-add" class="bd-primary">Add to my charts</button>
-        <span class="bd-added" hidden>Added. It's below and on the Regiment tab.</span>
+        <span class="bd-added" hidden>Added. It's below and on the Overview tab.</span>
       </div>
     </div>
     <h2 class="bd-section-title">My charts</h2>

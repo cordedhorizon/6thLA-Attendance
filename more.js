@@ -950,3 +950,28 @@
     @media (max-width: 520px) { .la-sections { gap: 0; } .la-sections button { flex: 1 1 auto; padding: 8px 2px; font-size: 14px; } }`;
   document.head.append(st);
 })();
+
+// ---------- phones and tablets: hints say tap instead of point at or click ----------
+(function () {
+  if (!matchMedia('(pointer: coarse)').matches) return;
+  const SWAPS = [
+    [/Point at a dot to see its date and count, or click it to see who was there\./g, 'Tap a dot to see who was there.'],
+    [/Point at a day for details, or click it to see who was there\./g, 'Tap a day to see who was there.'],
+    [/Point at an? /g, 'Tap a '],
+    [/\bClick\b/g, 'Tap'],
+    [/\bclick\b/g, 'tap'],
+    [/\bclicking\b/g, 'tapping'],
+  ];
+  const fix = () => {
+    const walk = document.createTreeWalker(document.querySelector('.la') ?? document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => (n.parentElement?.closest('p, .bd-added, .mb-note') && !n.parentElement.closest('.la-tip, .la-zoomhint') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+    });
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      let t = n.nodeValue;
+      for (const [a, b] of SWAPS) t = t.replace(a, b);
+      if (t !== n.nodeValue) n.nodeValue = t;
+    }
+  };
+  document.addEventListener('DOMContentLoaded', fix);
+  dash.onData(() => requestAnimationFrame(fix));
+})();

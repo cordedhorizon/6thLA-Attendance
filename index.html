@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
-<link rel="stylesheet" href="site.css?v=83205727">
+<link rel="stylesheet" href="site.css?v=02fc3544">
 <script src="d3.min.js?v=6d64bd2f"></script>
 <script src="dash-shim.js?v=0a72717d"></script>
 </head>
@@ -93,7 +93,7 @@
       <input id="find-member" type="search" list="all-members" placeholder="Find a member" aria-label="Find a member" autocomplete="off">
       <datalist id="all-members"></datalist>
       <p class="mb-asof" data-draw="mb-asof"></p>
-      <p class="mb-asof">Site updated Nov 12, 2026, 14:29 UTC</p>
+      <p class="mb-asof">Site updated Nov 12, 2026, 14:48 UTC</p>
     </div>
   </header>
 
@@ -156,6 +156,7 @@
   </div>
 
   <p class="la-zoomhint">Tip: hold Ctrl and scroll over a chart to zoom in, or hold Ctrl and drag across part of it. Double-click a chart to zoom back out.</p>
+  <p class="la-zoomhint la-touchhint">Tip: pinch a chart with two fingers to zoom in, and drag sideways to move along it. Double-tap or press Reset zoom to zoom back out.</p>
 
   <section id="regiment" class="la-page" role="tabpanel" aria-labelledby="tab-regiment">
     <div class="la-tiles">
@@ -914,6 +915,9 @@ function measure(svg, labels) {
   return w;
 }
 
+// Phones and tablets: tips say tap, and charts zoom with two fingers instead of Ctrl.
+const TOUCH = matchMedia('(pointer: coarse)').matches;
+
 function makeTip(el) {
   const tip = document.createElement('div');
   tip.className = 'la-tip';
@@ -926,7 +930,7 @@ function makeTip(el) {
     for (const l of lines) {
       const d = document.createElement('div');
       if (l.color) { const i = document.createElement('i'); i.style.background = l.color; d.append(i); }
-      d.append(document.createTextNode(l.text));
+      d.append(document.createTextNode(TOUCH ? l.text.replace(/\bClick\b/g, 'Tap').replace(/\bclick\b/g, 'tap') : l.text));
       tip.append(d);
     }
     tip.hidden = false;
@@ -1039,6 +1043,82 @@ function attachZoom(el, svg, rect, all, shown, pos, H) {
     if (b > a) set(off + a, off + b);
   });
   rect.on('dblclick.zoom', () => { if (el._zoom) set(0, all.length - 1); });
+  // Touch: pinch with two fingers to zoom, drag sideways with one finger to move along a zoomed
+  // chart, double-tap to zoom back out. Up-and-down drags still scroll the page.
+  // Set on the chart box: browsers ignore touch-action on SVG shapes, and would zoom the whole page instead.
+  el.style.touchAction = 'pan-y';
+  rect.style('touch-action', 'pan-y');
+  // Kept on the chart element, so a drag carries on across the redraw each step of it causes.
+  const T = el._touch ??= { touches: new Map(), pinch: null, pan: null, lastTap: 0 };
+  const touches = T.touches;
+  const pts = () => [...touches.values()];
+  const pinchWindow = () => {
+    const [p, q] = pts();
+    const d = Math.max(20, Math.abs(p[0] - q[0]));
+    const n = shown.length;
+    let w = Math.round(n * T.pinch.d / d);
+    w = Math.max(3, Math.min(all.length, w));
+    const c = T.pinch.c;
+    let a = off + Math.round(c - (c / Math.max(1, n - 1)) * (w - 1));
+    if (a < 0) a = 0;
+    if (a + w > all.length) a = Math.max(0, all.length - w);
+    return [a, a + w - 1];
+  };
+  rect.on('pointerdown.touch', (ev) => {
+    if (ev.pointerType !== 'touch') return;
+    touches.set(ev.pointerId, d3.pointer(ev, svg.node()));
+    try { rect.node().setPointerCapture(ev.pointerId); } catch { /* already gone */ }
+    if (touches.size === 2) {
+      const [p, q] = pts();
+      T.pinch = { d: Math.max(20, Math.abs(p[0] - q[0])), c: nearest((p[0] + q[0]) / 2) };
+      T.pan = null;
+      ev.preventDefault();
+    } else if (touches.size === 1 && el._zoom) {
+      T.pan = { x: d3.pointer(ev, svg.node())[0], moved: false };
+    }
+  });
+  rect.on('pointermove.touch', (ev) => {
+    if (ev.pointerType !== 'touch' || !touches.has(ev.pointerId)) return;
+    touches.set(ev.pointerId, d3.pointer(ev, svg.node()));
+    if (T.pinch && touches.size === 2) {
+      const [a, b] = T.pinch.win = pinchWindow();
+      const x0 = pos(all[Math.max(a, off)] ?? shown[0]), x1 = pos(all[Math.min(b, off + shown.length - 1)] ?? shown[shown.length - 1]);
+      sel.attr('x', Math.min(x0, x1)).attr('width', Math.abs(x1 - x0)).attr('visibility', 'visible');
+    } else if (T.pan) {
+      const px = d3.pointer(ev, svg.node())[0];
+      const stepPx = shown.length > 1 ? Math.abs(pos(shown[1]) - pos(shown[0])) : 0;
+      if (!stepPx) return;
+      const k = Math.round((T.pan.x - px) / stepPx);
+      if (k) {
+        T.pan.moved = true;
+        T.pan.x -= k * stepPx;
+        const n = shown.length;
+        let a = Math.max(0, Math.min(all.length - n, off + k));
+        if (a !== off) set(a, a + n - 1);
+      }
+    }
+  });
+  const end = (ev) => {
+    if (ev.pointerType !== 'touch' || !touches.has(ev.pointerId)) return;
+    // A pinch takes effect when either finger lifts (or the browser cancels the touch).
+    if (T.pinch) {
+      const win = T.pinch.win;
+      touches.clear(); T.pinch = null; T.pan = null; sel.attr('visibility', 'hidden');
+      if (win && (win[1] - win[0] + 1 !== shown.length || win[0] !== off)) set(win[0], win[1]);
+      return;
+    }
+    touches.delete(ev.pointerId);
+    if (!touches.size) {
+      const tapped = !T.pinch && !(T.pan && T.pan.moved) && ev.type === 'pointerup';
+      T.pinch = null; T.pan = null; sel.attr('visibility', 'hidden');
+      if (tapped) {
+        const now = ev.timeStamp;
+        if (now - T.lastTap < 350 && el._zoom) { T.lastTap = 0; set(0, all.length - 1); }
+        else T.lastTap = now;
+      }
+    }
+  };
+  rect.on('pointerup.touch', end).on('pointercancel.touch', end);
   if (el._zoom) {
     const reset = document.createElement('button');
     reset.type = 'button';
@@ -1538,7 +1618,7 @@ dash.draw('multi-rows', (tb) => {
 <script src="builder.js?v=bfd7fde1"></script>
 <script src="members.js?v=e3cfb0ff"></script>
 <script src="awards.js?v=e5e5b882"></script>
-<script src="more.js?v=9b8410de"></script>
+<script src="more.js?v=9104e2e9"></script>
 <footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
 </main>
 </body>

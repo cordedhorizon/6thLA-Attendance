@@ -230,7 +230,8 @@ tr[data-post] { cursor: pointer; }
 /* Compare with nothing picked: just the prompt. */
 .la-card.mb-is-empty .mb-csv, .la-card.mb-is-empty .la-tablebox, .la-card.mb-is-empty .la-chart, .la-card.mb-is-empty .la-legend, .la-card.mb-is-empty .mb-h4 { display: none; }
 /* The zoom tip is about a mouse and keyboard. */
-@media (hover: none), (pointer: coarse) { .la-zoomhint { display: none; } }
+.la .la-touchhint { display: none; }
+@media (pointer: coarse) { .la .la-zoomhint { display: none; } .la .la-zoomhint.la-touchhint { display: block; } .la .la-zoomhint.la-touchhint[hidden] { display: none; } }
 /* Phones */
 @media (max-width: 560px) {
   .la .la-tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; max-width: 100%; box-sizing: border-box; }

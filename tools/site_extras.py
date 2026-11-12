@@ -30,6 +30,7 @@ rep('''  </header>
       <datalist id="all-members"></datalist>
       <p class="mb-asof" data-draw="mb-asof"></p>
       <p class="mb-asof">Site updated __BUILD__</p>
+      <button type="button" class="bd-small mb-theme">Light mode</button>
     </div>
   </header>
 ''')
@@ -364,7 +365,7 @@ rep('''</div>
 dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabpanel" aria-labelledby="tab-builder" hidden>
     <div class="la-card" id="builder-form">
       <h2>Build a chart</h2>
-      <p>Chart almost anything on the site: attendance, first-timers, recruits joining, promotions, milestones and results. Pick what to show and how to break it down, then narrow it with the period and filters below. Charts you add appear here and at the bottom of the Regiment tab, saved in this browser. Use Copy link to share one.</p>
+      <p>Chart almost anything on the site: attendance, first-timers, recruits joining, promotions, milestones and results. Pick what to show and how to break it down, then narrow it with the period and filters below. Charts you add appear here and at the bottom of the Overview tab, saved in this browser. Use Copy link to share one.</p>
       <div class="bd-form">
         <label for="bd-measure">Show
           <select id="bd-measure">
@@ -439,7 +440,7 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
       <div class="la-chart" data-draw="bd-preview"></div>
       <div class="bd-actions">
         <button type="button" id="bd-add" class="bd-primary">Add to my charts</button>
-        <span class="bd-added" hidden>Added. It's below and on the Regiment tab.</span>
+        <span class="bd-added" hidden>Added. It's below and on the Overview tab.</span>
       </div>
     </div>
     <h2 class="bd-section-title">My charts</h2>
@@ -461,6 +462,7 @@ head = '''<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<script>try { document.documentElement.dataset.theme = localStorage.getItem('la-theme') === 'light' ? 'light' : 'dark'; } catch { document.documentElement.dataset.theme = 'dark'; }</script>
 <link rel="stylesheet" href="site.css">
 <script src="d3.min.js"></script>
 <script src="dash-shim.js"></script>

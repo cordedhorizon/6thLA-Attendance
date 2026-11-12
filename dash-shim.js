@@ -70,7 +70,7 @@
   }
 
   window.dash = {
-    colors: [1, 2, 3, 4, 5, 6, 7, 8].map((i) => `var(--series-${i})`),
+    colors: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((i) => `var(--series-${i})`),
     calc(id, o) { calcs[id] = o; },
     data,
     // Site-only: a source's rows before the period picker filters them.

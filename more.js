@@ -427,6 +427,7 @@
     box.replaceChildren();
     const c = compareData();
     box.classList.toggle('dash-skeleton', !c);
+    box.closest('.la-card')?.classList.toggle('mb-is-empty', !!c?.empty);
     if (!c || c.empty) return;
     const p = P();
     if (c.mode === 'people') {
@@ -676,6 +677,9 @@
       }
       scroll.append(wrap);
     }
+    // On a narrow screen the year scrolls sideways: start at the latest months, then keep the reader's place.
+    scroll.scrollLeft = box._calLeft ?? scroll.scrollWidth;
+    scroll.addEventListener('scroll', () => { box._calLeft = scroll.scrollLeft; }, { passive: true });
   });
 
   // ---------- top controls on the new tab ----------
@@ -918,7 +922,15 @@
     // Only touch 'hidden' when it changes, or the observer below would keep firing.
     for (const b of row.querySelectorAll('[data-tab]')) { const h = !ts.includes(b.dataset.tab); if (b.hidden !== h) b.hidden = h; }
     if (row.hidden !== ts.length < 2) row.hidden = ts.length < 2;
+    const on = row.querySelector(`[data-tab="${name}"]`);
+    if (on && row.scrollWidth > row.clientWidth) {
+      const a = on.offsetLeft - row.offsetLeft, z = a + on.offsetWidth;
+      if (a < row.scrollLeft || z > row.scrollLeft + row.clientWidth) row.scrollLeft = Math.max(0, a - 24);
+    }
   }
+  // A tile's change-from-last-year line is only a dash unless one year is picked: hide it then.
+  const blankDeltas = () => { for (const d of document.querySelectorAll('.la-delta')) d.classList.toggle('mb-blank', d.textContent.trim() === '—'); };
+  dash.onData(() => requestAnimationFrame(blankDeltas));
   const prev = window.showTab;
   window.showTab = function (name, link) { prev(name, link); fit(name); };
   fit(document.querySelector('.la-page:not([hidden])')?.id || 'regiment');
@@ -937,4 +949,47 @@
     .la-tabs button[hidden] { display: none; }
     @media (max-width: 520px) { .la-sections { gap: 0; } .la-sections button { flex: 1 1 auto; padding: 8px 2px; font-size: 14px; } }`;
   document.head.append(st);
+})();
+
+// ---------- phones and tablets: hints say tap instead of point at or click ----------
+(function () {
+  if (!matchMedia('(pointer: coarse)').matches) return;
+  const SWAPS = [
+    [/Point at a dot to see its date and count, or click it to see who was there\./g, 'Tap a dot to see who was there.'],
+    [/Point at a day for details, or click it to see who was there\./g, 'Tap a day to see who was there.'],
+    [/Point at an? /g, 'Tap a '],
+    [/\bClick\b/g, 'Tap'],
+    [/\bclick\b/g, 'tap'],
+    [/\bclicking\b/g, 'tapping'],
+  ];
+  const fix = () => {
+    const walk = document.createTreeWalker(document.querySelector('.la') ?? document.body, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => (n.parentElement?.closest('p, .bd-added, .mb-note') && !n.parentElement.closest('.la-tip, .la-zoomhint') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+    });
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) {
+      let t = n.nodeValue;
+      for (const [a, b] of SWAPS) t = t.replace(a, b);
+      if (t !== n.nodeValue) n.nodeValue = t;
+    }
+  };
+  document.addEventListener('DOMContentLoaded', fix);
+  dash.onData(() => requestAnimationFrame(fix));
+})();
+
+// ---------- light and dark mode (dark unless picked) ----------
+(function () {
+  const b = document.querySelector('.mb-theme');
+  if (!b) return;
+  const show = () => {
+    const light = document.documentElement.dataset.theme === 'light';
+    b.textContent = light ? 'Dark mode' : 'Light mode';
+    b.setAttribute('aria-label', light ? 'Switch to dark mode' : 'Switch to light mode');
+  };
+  b.addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('la-theme', next); } catch { /* private window: lasts this visit only */ }
+    show();
+  });
+  show();
 })();

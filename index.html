@@ -94,7 +94,7 @@
       <input id="find-member" type="search" list="all-members" placeholder="Find a member" aria-label="Find a member" autocomplete="off">
       <datalist id="all-members"></datalist>
       <p class="mb-asof" data-draw="mb-asof"></p>
-      <p class="mb-asof">Site updated Nov 12, 2026, 15:17 UTC</p>
+      <p class="mb-asof">Site updated Nov 12, 2026, 18:09 UTC</p>
       <button type="button" class="bd-small mb-theme">Light mode</button>
     </div>
   </header>
@@ -936,9 +936,20 @@ function makeTip(el) {
       tip.append(d);
     }
     tip.hidden = false;
-    const w = tip.offsetWidth, W = el.clientWidth;
-    tip.style.left = Math.max(0, Math.min(W - w, x + 12)) + 'px';
-    tip.style.top = Math.max(0, y - tip.offsetHeight - 8) + 'px';
+    // Never cover the point itself: sit above it when there is room on screen, otherwise beside it.
+    const w = tip.offsetWidth, th = tip.offsetHeight, W = el.clientWidth, g = 12;
+    const roomAbove = el.getBoundingClientRect().top + y - th - g >= 4;
+    let left, top;
+    if (roomAbove) {
+      top = y - th - g;
+      left = Math.max(0, Math.min(W - w, x - w / 2));
+    } else {
+      top = Math.max(0, y - th / 2);
+      left = x + g + w <= W ? x + g : x - g - w;
+      if (left < 0) { left = Math.max(0, Math.min(W - w, x - w / 2)); top = y + g; }
+    }
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
   };
 }
 
@@ -1024,21 +1035,24 @@ function attachZoom(el, svg, rect, all, shown, pos, H) {
   });
   const sel = svg.append('rect').attr('class', 'la-zoomsel').attr('y', 8).attr('height', H - 30).attr('visibility', 'hidden');
   let start = null;
+  // The selection box stays inside the plotting area, however far the mouse is dragged.
+  const x0 = +rect.attr('x') || 0, x1 = x0 + (+rect.attr('width') || 0);
+  const inside = (px) => Math.max(x0, Math.min(x1, px));
   rect.on('pointerdown.zoom', (ev) => {
     if (!ev.ctrlKey && !ev.metaKey) return;
     ev.preventDefault();
-    start = d3.pointer(ev, svg.node())[0];
+    start = inside(d3.pointer(ev, svg.node())[0]);
     rect.node().setPointerCapture(ev.pointerId);
     sel.attr('x', start).attr('width', 0).attr('visibility', 'visible');
   });
   rect.on('pointermove.zoom', (ev) => {
     if (start == null) return;
-    const px = d3.pointer(ev, svg.node())[0];
+    const px = inside(d3.pointer(ev, svg.node())[0]);
     sel.attr('x', Math.min(start, px)).attr('width', Math.abs(px - start));
   });
   rect.on('pointerup.zoom', (ev) => {
     if (start == null) return;
-    const px = d3.pointer(ev, svg.node())[0];
+    const px = inside(d3.pointer(ev, svg.node())[0]);
     const a = nearest(Math.min(start, px)), b = nearest(Math.max(start, px));
     start = null;
     sel.attr('visibility', 'hidden');

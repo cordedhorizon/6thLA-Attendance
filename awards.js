@@ -141,8 +141,12 @@
       for (const i of list) holders[i].push(name);
     }
     let shown = 0;
-    R.roles.forEach((r, i) => {
-      if (group && r.group !== group) return;
+    // Medals, then ribbons, badges and positions; within each, the server's own order. Roles nobody here holds are left out.
+    const order = R.roles.map((r, i) => i).sort((a, b) => GROUPS.indexOf(R.roles[a].group) - GROUPS.indexOf(R.roles[b].group) || a - b);
+    for (const i of order) {
+      const r = R.roles[i];
+      if (group && r.group !== group) continue;
+      if (!holders[i].length) continue;
       shown += 1;
       const tr = document.createElement('tr');
       LA.td(tr, r.role);
@@ -151,8 +155,7 @@
       n.dataset.v = holders[i].length;
       const who = LA.td(tr, '');
       const names = holders[i].sort((a, b) => a.localeCompare(b));
-      if (!names.length) who.textContent = 'Nobody yet';
-      else if (names.length <= 8) for (const x of names) who.append(nameLink(x), ' ');
+      if (names.length <= 8) for (const x of names) who.append(nameLink(x), ' ');
       else {
         const det = el('details', 'mb-more');
         det.open = openLists.has(r.role);
@@ -164,8 +167,8 @@
         who.append(det);
       }
       tb.append(tr);
-    });
-    if (!shown) LA.emptyRow(tb, 4, 'Nothing of this type.');
+    }
+    if (!shown) LA.emptyRow(tb, 4, 'Nobody here holds one of these.');
     if (keep) [box.scrollTop, box.scrollLeft] = keep;
   });
   // Opening or closing a list leaves its "Show all" link where it was on screen.

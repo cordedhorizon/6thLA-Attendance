@@ -119,7 +119,7 @@
     new MutationObserver(() => applySort(table)).observe(table.tBodies[0], { childList: true });
   }
   document.addEventListener('DOMContentLoaded', () => {
-    for (const t of document.querySelectorAll('#recruits table:not(.mb-retention), #results table, #milestones table, #promotions table, #check table, #company-card table, #awards table')) makeSortable(t);
+    for (const t of document.querySelectorAll('#recruits table:not(.mb-retention), #results table, #milestones table, #promotions table, #check table, #company-card table, #company-table table, #awards table')) makeSortable(t);
   });
 
   // ---------- data as of ----------
@@ -191,7 +191,7 @@
       ['Active members', fmt(mem.filter((m) => m.status === 'Active').length), 'Seen in the last 30 days'],
       ['Average at events', avg('event'), 'In the period picked'],
       ['Average at drills', avg('drill'), 'In the period picked'],
-      ['Different people', fmt(new Set(inP.filter((r) => r.company === co).map((r) => r.name)).size), 'Attended in the period'],
+      ['Unique people', fmt(new Set(inP.filter((r) => r.company === co).map((r) => r.name)).size), 'Attended in the period'],
       ...(co === 'Recruits' ? [] : [['Recruits who joined', fmt(joined), 'In the period picked']]),
     ]);
   });
@@ -392,7 +392,7 @@
       ['Drills held', A.drills, B.drills, fmt],
       ['Average event attendance', A.avgE, B.avgE, one],
       ['Average drill attendance', A.avgD, B.avgD, one],
-      ['Different people', A.people, B.people, fmt],
+      ['Unique people', A.people, B.people, fmt],
       ['First-timers', A.fresh, B.fresh, fmt],
       ['Recruits who joined', A.joined, B.joined, fmt],
       ["Regiment's event win rate", A.winRate, B.winRate, pct],
@@ -544,7 +544,9 @@
 
   // ---------- retention: do new people keep coming? ----------
   const rt = { from: document.getElementById('rt-from'), to: document.getElementById('rt-to'), group: document.getElementById('rt-group'), points: document.getElementById('rt-points') };
-  let rtState = { from: '', to: '', group: 'month', points: [30, 90, 180], ...L.load('la-retention', {}) };
+  const rtSaved = L.load('la-retention', {});
+  if (!rtSaved.v) delete rtSaved.group; // saved before quarters became the default (2026-11-18)
+  let rtState = { from: '', to: '', group: 'quarter', points: [30, 90, 180], ...rtSaved, v: 2 };
   const parsePoints = (s) => [...new Set(String(s).split(/[^0-9]+/).map(Number).filter((n) => n >= 7 && n <= 1095))].sort((a, z) => a - z).slice(0, 6);
   function writeRt() {
     if (!rt.from) return;
@@ -652,17 +654,20 @@
     for (const y of years) {
       const y0 = new Date(Date.UTC(y, 0, 1)), y1 = new Date(Date.UTC(y + 1, 0, 1));
       const weeks = d3.utcSunday.count(d3.utcSunday.floor(y0), y1) + 1;
-      const W = L0 + weeks * (C + G), H = T0 + 7 * (C + G);
+      const W = weeks * (C + G), H = T0 + 7 * (C + G);
       const wrap = el('div', 'mb-cal-year');
       wrap.append(el('h4', 'mb-h4', String(y)));
-      const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H).attr('class', 'la-svg');
-      for (const [i, d] of [[1, 'Mon'], [3, 'Wed'], [5, 'Fri']]) svg.append('text').attr('x', 0).attr('y', T0 + i * (C + G) + C - 2).text(d);
-      for (const m of d3.utcMonths(y0, y1)) svg.append('text').attr('x', L0 + d3.utcSunday.count(y0, m) * (C + G)).attr('y', 10).text(d3.utcFormat('%b')(m));
+      const line = el('div', 'mb-cal-line');
+      wrap.append(line);
+      const days = d3.select(line).append('svg').attr('width', L0).attr('height', H).attr('class', 'la-svg mb-cal-days');
+      for (const [i, d] of [[1, 'Mon'], [3, 'Wed'], [5, 'Fri']]) days.append('text').attr('x', 0).attr('y', T0 + i * (C + G) + C - 2).text(d);
+      const svg = d3.select(line).append('svg').attr('width', W).attr('height', H).attr('class', 'la-svg');
+      for (const m of d3.utcMonths(y0, y1)) svg.append('text').attr('x', d3.utcSunday.count(y0, m) * (C + G)).attr('y', 10).text(d3.utcFormat('%b')(m));
       for (const d of d3.utcDays(y0, y1)) {
         const key = iso(d);
         if (key < span[0] || key > span[1]) continue; // outside our records
         const list = byDay.get(key);
-        const x = L0 + d3.utcSunday.count(d3.utcSunday.floor(y0), d) * (C + G) - (d3.utcSunday.floor(y0) < y0 ? 0 : 0);
+        const x = d3.utcSunday.count(d3.utcSunday.floor(y0), d) * (C + G);
         const rect = svg.append('rect').attr('x', x).attr('y', T0 + d.getUTCDay() * (C + G)).attr('width', C).attr('height', C).attr('rx', 2);
         if (!list) { rect.style('fill', 'var(--cds-chart-grid)'); continue; }
         const top = d3.greatest(list, (z) => z.n);
@@ -875,6 +880,8 @@
     ['Members', ['people', 'recruits', 'promotions', 'milestones', 'awards']],
     ['Tools', ['check', 'compare', 'builder', 'checks']],
   ];
+  // Pages left out of the menu: they open from their link (#tools/name-checks) and show their button only while open.
+  const UNLISTED = ['checks'];
   const sectionOf = (tab) => SECTIONS.find(([, t]) => t.includes(tab)) ?? SECTIONS[0];
   const $ = (s) => document.querySelector(s);
   const make = (tag, attrs = {}, text) => { const e = document.createElement(tag); for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v); if (text != null) e.textContent = text; return e; };
@@ -920,7 +927,7 @@
     last[sec] = name;
     for (const b of nav.children) b.setAttribute('aria-current', b.dataset.section === sec ? 'page' : 'false');
     // Only touch 'hidden' when it changes, or the observer below would keep firing.
-    for (const b of row.querySelectorAll('[data-tab]')) { const h = !ts.includes(b.dataset.tab); if (b.hidden !== h) b.hidden = h; }
+    for (const b of row.querySelectorAll('[data-tab]')) { const h = !ts.includes(b.dataset.tab) || (UNLISTED.includes(b.dataset.tab) && b.dataset.tab !== name); if (b.hidden !== h) b.hidden = h; }
     if (row.hidden !== ts.length < 2) row.hidden = ts.length < 2;
     const on = row.querySelector(`[data-tab="${name}"]`);
     if (on && row.scrollWidth > row.clientWidth) {
@@ -931,6 +938,8 @@
   // A tile's change-from-last-year line is only a dash unless one year is picked: hide it then.
   const blankDeltas = () => { for (const d of document.querySelectorAll('.la-delta')) d.classList.toggle('mb-blank', d.textContent.trim() === '—'); };
   dash.onData(() => requestAnimationFrame(blankDeltas));
+  const firstTimers = document.querySelector('.la-tile [data-draw="tile"][data-f="new_people"]')?.closest('.la-tile');
+  dash.onData(() => { const p = dash.params(); const h = (p.period ?? 'all') === 'all' && (p.year ?? 'all') === 'all' && !p.from && !p.to; if (firstTimers && firstTimers.hidden !== h) firstTimers.hidden = h; });
   const prev = window.showTab;
   window.showTab = function (name, link) { prev(name, link); fit(name); };
   fit(document.querySelector('.la-page:not([hidden])')?.id || 'regiment');
@@ -992,4 +1001,55 @@
     show();
   });
   show();
+})();
+
+// ---------- tables: pinned name column, a fade while more columns sit to the right, row counts ----------
+(function () {
+  const PIN = ['Name', 'Name as written', 'Award or role', 'Company', 'First attended', 'Date'];
+  // How many rows a long table holds, said in its own words. Tables not listed here get no count.
+  const NOUN = {
+    'company-card': ['member', 'members'], 'awards-list': ['award or role', 'awards and roles'], 'awards-top': ['member', 'members'],
+    'recruit-list': ['recruit', 'recruits'], retention: ['group', 'groups'], 'results-list': ['result', 'results'],
+    'promotions-log': ['rank change', 'rank changes'], 'time-in-rank': ['member', 'members'], 'milestones-next': ['member', 'members'],
+    'milestones-reached': ['milestone', 'milestones'], 'check-results': ['person', 'people'], 'names-to-review': ['name', 'names'],
+    'multi-company': ['name', 'names'],
+  };
+  const label = (th) => th.textContent.trim();
+  function setUp(box) {
+    const table = box.querySelector('table');
+    if (!table || box._tableExtras) return;
+    box._tableExtras = true;
+    const card = box.closest('.la-card');
+    const noun = NOUN[card?.id];
+    let count = null;
+    if (noun) { count = document.createElement('p'); count.className = 'la-rowcount'; box.after(count); }
+    const update = () => {
+      const ths = [...table.querySelectorAll('thead th')];
+      const names = ths.map(label);
+      const want = PIN.find((p) => names.includes(p));
+      const i = want ? names.indexOf(want) : -1;
+      ths.forEach((th, j) => th.classList.toggle('la-pin', j === i));
+      for (const tr of table.tBodies[0]?.rows ?? []) {
+        if (tr.cells.length !== ths.length) continue; // an "empty" message row spans every column
+        for (let j = 0; j < tr.cells.length; j++) tr.cells[j].classList.toggle('la-pin', j === i);
+      }
+      edges();
+      if (count) {
+        const n = [...(table.tBodies[0]?.rows ?? [])].filter((r) => !r.querySelector('.mb-empty') && r.cells.length === ths.length).length;
+        const text = n ? `${n.toLocaleString('en-US')} ${n === 1 ? noun[0] : noun[1]}` : '';
+        if (count.textContent !== text) count.textContent = text;
+        if (count.hidden !== !n) count.hidden = !n;
+      }
+    };
+    const edges = () => {
+      const more = box.scrollLeft + box.clientWidth < box.scrollWidth - 2;
+      box.classList.toggle('la-more-right', more);
+      box.classList.toggle('la-scrolled', box.scrollLeft > 2);
+    };
+    new MutationObserver(update).observe(table, { childList: true, subtree: true });
+    box.addEventListener('scroll', edges, { passive: true });
+    new ResizeObserver(edges).observe(box);
+    update();
+  }
+  document.addEventListener('DOMContentLoaded', () => { for (const b of document.querySelectorAll('.la-tablebox')) setUp(b); });
 })();

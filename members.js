@@ -400,7 +400,7 @@
       ['New recruits', fmt(r.length), 'First seen in this period'],
       ['Joined a company', fmt(n('Joined a company')), r.length ? pct(n('Joined a company') / r.length) + ' of recruits' : ''],
       ['Typical days to join', days.length ? fmt(Math.round(d3.median(days))) : '—', 'Median'],
-      ['Still a recruit', fmt(n('Still a recruit')), (() => { const q = r.filter((x) => x.quiet).length; return q ? `${fmt(q)} not seen in the last 30 days` : 'All seen in the last 30 days'; })()],
+      ['Still a recruit', fmt(n('Still a recruit')), (() => { const s = n('Still a recruit'), q = r.filter((x) => x.quiet).length; if (!s) return ''; if (q === s) return s === 1 ? 'Not seen in the last 30 days' : 'None seen in the last 30 days'; return q ? `${fmt(s - q)} seen in the last 30 days, ${fmt(q)} not` : 'All seen in the last 30 days'; })()],
     ]);
   });
   dash.draw('rc-legend', (el) => legend(el, STATUS.map(([s, c]) => [s, c()])));
@@ -452,7 +452,7 @@
     const decided = c('W').length + c('L').length;
     tiles(el, [
       ['Record', `${c('W').length}–${c('L').length}${c('D').length ? '–' + c('D').length : ''}`, c('D').length ? 'Wins, losses, draws' : 'Wins and losses'],
-      ['Win rate', decided ? pct(c('W').length / decided) : '—', plural(r.length, 'event with a score', 'events with a score')],
+      ['Win rate', decided ? pct(c('W').length / decided) : '—', decided ? `Of ${plural(decided, 'win or loss', 'wins and losses')}${c('D').length ? ', draws left out' : ''}` : plural(r.length, 'event with a score', 'events with a score')],
       ['Average attendance in wins', avg(c('W')), ''],
       ['Average attendance in losses', avg(c('L')), ''],
     ]);
@@ -469,9 +469,19 @@
     const groups = d3.group(r, (x) => { const k = band(x.n); return `${k}–${k + step - 1}`; });
     const rate = new Map();
     for (const [k, v] of groups) { const d = v.filter((x) => x.res !== 'D'); if (d.length) rate.set(k, Math.round(d.filter((x) => x.res === 'W').length / d.length * 100)); }
+    // A group with only a few wins and losses gives a rate that means little: grey it out.
+    const FEW = 5;
+    const decidedIn = (k) => (groups.get(k) ?? []).filter((x) => x.res !== 'D').length;
     barChart(el, keys, [{ name: 'Win rate', color: dash.colors[2], values: rate }], {
       height: 200, valueFmt: (v) => v + '%', unit: ' won', catLabel: (k) => k, tipTitle: (k) => `${k} attended`, csvLabel: 'Attendance',
-      extra: (k) => [{ text: plural(groups.get(k)?.length ?? 0, 'event', 'events') }],
+      barColor: (k) => (decidedIn(k) < FEW ? 'var(--cds-chart-muted)' : null),
+      barText: (k) => (groups.get(k)?.length ? fmt(groups.get(k).length) : ''),
+      extra: (k) => {
+        const v = groups.get(k) ?? [], d = v.length - decidedIn(k);
+        const out = [{ text: plural(v.length, 'event', 'events') + (d ? `, ${fmt(d)} drawn` : '') }];
+        if (decidedIn(k) < FEW) out.push({ text: 'Too few wins and losses to read much into' });
+        return out;
+      },
     });
   });
   dash.draw('rs-legend', (el) => legend(el, Object.values(RES).map(([s, c]) => [s, c()])));

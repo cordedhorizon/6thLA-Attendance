@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
 <script>try { document.documentElement.dataset.theme = localStorage.getItem('la-theme') === 'light' ? 'light' : 'dark'; } catch { document.documentElement.dataset.theme = 'dark'; }</script>
-<link rel="stylesheet" href="site.css?v=ecc7bc25">
+<link rel="stylesheet" href="site.css?v=048a1a37">
 <script src="d3.min.js?v=6d64bd2f"></script>
 <script src="dash-shim.js?v=0a72717d"></script>
 </head>
@@ -89,12 +89,12 @@
 
   <header class="la-head">
     <h1>6th Louisiana attendance</h1>
-    <p class="la-lede"><span data-draw="period">—</span>: average attendance of <b data-draw="lede" data-k="event" data-f="avg" data-source="summary" data-field="avg">—</b> at events and <b data-draw="lede" data-k="drill" data-f="avg" data-source="summary" data-field="avg">—</b> at drills, from <b data-draw="lede" data-k="all" data-f="people" data-source="summary" data-field="people">—</b> different people.</p>
+    <p class="la-lede"><span data-draw="period">—</span>: average attendance of <b data-draw="lede" data-k="event" data-f="avg" data-source="summary" data-field="avg">—</b> at events and <b data-draw="lede" data-k="drill" data-f="avg" data-source="summary" data-field="avg">—</b> at drills, from <b data-draw="lede" data-k="all" data-f="people" data-source="summary" data-field="people">—</b> unique people.</p>
     <div class="mb-find">
       <input id="find-member" type="search" list="all-members" placeholder="Find a member" aria-label="Find a member" autocomplete="off">
       <datalist id="all-members"></datalist>
       <p class="mb-asof" data-draw="mb-asof"></p>
-      <p class="mb-asof">Site updated Nov 12, 2026, 18:09 UTC</p>
+      <p class="mb-asof">Site updated Nov 18, 2026, 15:18 UTC</p>
       <button type="button" class="bd-small mb-theme">Light mode</button>
     </div>
   </header>
@@ -166,7 +166,7 @@
       <div class="la-tile"><span>Drills held</span><b class="la-num" data-draw="tile" data-k="drill" data-f="posts" data-source="summary" data-field="posts">—</b><div class="la-delta" data-draw="delta" data-k="drill" data-f="posts_change" data-source="summary" data-field="posts_change">—</div></div>
       <div class="la-tile"><span>Average event attendance</span><b class="la-num" data-draw="tile" data-k="event" data-f="avg" data-source="summary" data-field="avg">—</b><div class="la-delta" data-draw="delta" data-k="event" data-f="avg_change" data-source="summary" data-field="avg_change">—</div></div>
       <div class="la-tile"><span>Average drill attendance</span><b class="la-num" data-draw="tile" data-k="drill" data-f="avg" data-source="summary" data-field="avg">—</b><div class="la-delta" data-draw="delta" data-k="drill" data-f="avg_change" data-source="summary" data-field="avg_change">—</div></div>
-      <div class="la-tile"><span>Different people</span><b class="la-num" data-draw="tile" data-k="all" data-f="people" data-source="summary" data-field="people">—</b><div class="la-delta" data-draw="delta" data-k="all" data-f="people_change" data-source="summary" data-field="people_change">—</div></div>
+      <div class="la-tile"><span>Unique people</span><b class="la-num" data-draw="tile" data-k="all" data-f="people" data-source="summary" data-field="people">—</b><div class="la-delta" data-draw="delta" data-k="all" data-f="people_change" data-source="summary" data-field="people_change">—</div></div>
       <div class="la-tile"><span>First-timers</span><b class="la-num" data-draw="tile" data-k="all" data-f="new_people" data-source="summary" data-field="new_people">—</b><div class="la-delta" data-draw="delta" data-k="all" data-f="new_people_change" data-source="summary" data-field="new_people_change">—</div></div>
     </div>
 
@@ -255,7 +255,7 @@
             <th data-field="company">Company</th>
             <th class="la-n" data-field="avg">Average attendance</th>
             <th class="la-n" data-field="share">Share</th>
-            <th class="la-n" data-field="people">Different people</th>
+            <th class="la-n" data-field="people">Unique people</th>
           </tr></thead>
           <tbody data-draw="company-rows" class="mb-company-rows"></tbody>
         </table>
@@ -366,7 +366,7 @@
     <div class="la-grid">
       <div class="la-card" id="win-by-size">
         <h2>Win rate by attendance</h2>
-        <p>Events grouped by how many attended. Point at a bar to see how many events are in each group.</p>
+        <p>Events grouped by how many attended. The number over each bar is how many events are in that group. Draws are left out of the win rate, and grey bars have fewer than five wins and losses, too few to read much into.</p>
         <div class="la-chart la-short" data-draw="rs-bands"></div>
       </div>
       <div class="la-card" id="results-over-time">
@@ -593,7 +593,7 @@
               <option value="event">Attendance at each event</option>
               <option value="share">Share of attendance (%)</option>
               <option value="held">Events and drills held</option>
-              <option value="people">Different people</option>
+              <option value="people">Unique people</option>
               <option value="attended">Times one person attended</option>
             </optgroup>
             <optgroup label="Members">
@@ -1149,7 +1149,7 @@ function attachZoom(el, svg, rect, all, shown, pos, H) {
 function lineChart(el, allMonths, series, o = {}) {
   const months = zoomWindow(el, allMonths, () => lineChart(el, allMonths, series, o));
   el._csv = chartCsv(allMonths, series, o);
-  const W = Math.max(240, el.clientWidth), H = o.height ?? 240;
+  const W = Math.max(o.minW ?? 240, el.clientWidth), H = o.height ?? 240;
   const svg = d3.select(el).append('svg').attr('class', 'la-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
   const yMax = o.yMax ?? (d3.max(series.flatMap((s) => months.map((m) => s.values.get(m) ?? 0))) || 1);
   const y = d3.scaleLinear([0, yMax], [H - 22, 8]).nice(o.yTicks ?? 4);
@@ -1214,7 +1214,7 @@ function barChart(el, allMonths, series, o = {}) {
   const svg = d3.select(el).append('svg').attr('class', 'la-svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`);
   const total = (m) => d3.sum(series, (s) => s.values.get(m) ?? 0);
   const yMax = (o.stack ? d3.max(months, total) : d3.max(series.flatMap((s) => months.map((m) => s.values.get(m) ?? 0)))) || 1;
-  const y = d3.scaleLinear([0, yMax], [H - 22, 8]).nice(4);
+  const y = d3.scaleLinear([0, yMax], [H - 22, o.barText ? 22 : 8]).nice(4);
   const ticks = y.ticks(4).filter((t) => o.decimals || Number.isInteger(t));
   const l = measure(svg, ticks.map((t) => fmt(t))) + 8;
   const x = d3.scaleBand(months, [l + 2, W - 2]).paddingInner(0.2);
@@ -1233,9 +1233,16 @@ function barChart(el, allMonths, series, o = {}) {
       if (!v) continue;
       const bx = o.stack ? x(m) : x(m) + inner(s.name);
       const bw = Math.min(32, o.stack ? x.bandwidth() : inner.bandwidth());
-      svg.append('rect').attr('x', bx).attr('width', Math.max(1, bw)).attr('y', y(base + v)).attr('height', Math.max(0, y(base) - y(base + v))).attr('rx', o.stack ? 0 : r).style('fill', s.color);
+      svg.append('rect').attr('x', bx).attr('width', Math.max(1, bw)).attr('y', y(base + v)).attr('height', Math.max(0, y(base) - y(base + v))).attr('rx', o.stack ? 0 : r).style('fill', o.barColor?.(m, s) ?? s.color);
       if (o.stack) base += v;
     }
+  }
+  // Optional small label over each bar, e.g. how many events a bar stands for.
+  if (o.barText) for (const m of months) {
+    const t = o.barText(m);
+    if (!t) continue;
+    const top = o.stack ? total(m) : d3.max(series, (s) => s.values.get(m) ?? 0);
+    svg.append('text').attr('class', 'la-bartext').attr('x', x(m) + x.bandwidth() / 2).attr('y', y(top) - 5).attr('text-anchor', 'middle').text(t);
   }
   const tip = makeTip(el);
   const hl = svg.append('rect').attr('fill', 'var(--color-fg)').attr('opacity', 0.06).attr('visibility', 'hidden').attr('y', 8).attr('height', H - 30);
@@ -1477,7 +1484,10 @@ dash.draw('company-rows', (tb) => {
   for (const x of r.filter((x) => x.kind === p.kind && x.year === p.year && x.day === p.day).sort((a, b) => companyRank(a.company) - companyRank(b.company))) {
     const tr = document.createElement('tr');
     tr.dataset.key = [x.kind, x.day, x.year, x.company].map(enc).join(',');
-    cell(tr, x.company); cell(tr, one(x.avg), 1); cell(tr, pct(x.share), 1); cell(tr, fmt(x.people), 1);
+    cell(tr, x.company);
+    cell(tr, x.people > 0 && x.avg < 0.05 ? 'under 0.1' : one(x.avg), 1); tr.lastChild.dataset.v = x.avg;
+    cell(tr, x.people > 0 && x.share < 0.005 ? 'under 1%' : pct(x.share), 1); tr.lastChild.dataset.v = x.share;
+    cell(tr, fmt(x.people), 1); tr.lastChild.dataset.v = x.people;
     tb.append(tr);
   }
 });
@@ -1488,7 +1498,14 @@ dash.draw('minis', (el) => {
   const months = monthRange(r);
   if (!months.length) return;
   const yMax = d3.max(r, (x) => x.avg) || 1;
-  for (const c of companiesIn(r)) {
+  // Companies with under 2% of the attendance in the period picked go in a closed "smaller companies" fold.
+  const p = P();
+  const share = new Map((rows('companies') ?? []).filter((x) => x.kind === p.kind && x.year === p.year && x.day === p.day).map((x) => [x.company, x.share]));
+  const cos = companiesIn(r);
+  const small = cos.filter((c) => (share.get(c) ?? 0) < 0.02);
+  const fold = small.length > 1 && small.length < cos.length;
+  const charts = [];
+  const add = (into, c) => {
     const box = document.createElement('div');
     box.className = 'la-mini';
     const h = document.createElement('h4');
@@ -1496,8 +1513,25 @@ dash.draw('minis', (el) => {
     const ch = document.createElement('div');
     ch.className = 'la-chart';
     box.append(h, ch);
-    el.append(box);
-    lineChart(ch, months, [{ name: c, color: companyColor(c), values: new Map(r.filter((x) => x.company === c).map((x) => [x.month, x.avg])) }], { height: 110, yMax, yTicks: 2, unit: ' average' });
+    into.append(box);
+    charts.push([ch, c]);
+  };
+  for (const c of cos) if (!fold || !small.includes(c)) add(el, c);
+  if (fold) {
+    const det = document.createElement('details');
+    det.className = 'la-minis-more';
+    det.open = !!el._moreOpen;
+    const sm = document.createElement('summary');
+    sm.textContent = `Smaller companies: ${small.join(', ')}`;
+    const grid = document.createElement('div');
+    grid.className = 'la-minis';
+    det.append(sm, grid);
+    el.append(det);
+    for (const c of small) add(grid, c);
+    det.addEventListener('toggle', () => { if (el._moreOpen === det.open) return; el._moreOpen = det.open; if (det.open) dash.draw('minis'); });
+  }
+  for (const [ch, c] of charts) {
+    if (!ch.closest('details:not([open])')) lineChart(ch, months, [{ name: c, color: companyColor(c), values: new Map(r.filter((x) => x.company === c).map((x) => [x.month, x.avg])) }], { height: 110, yMax, yTicks: 2, unit: ' average', minW: 140 });
   }
 });
 
@@ -1593,7 +1627,10 @@ dash.draw('day-minis', (el) => {
   const months = monthRange(r);
   if (!months.length) return;
   const yMax = d3.max(r, (x) => x.avg) || 1;
-  for (const d of DAYS.filter((d) => r.some((x) => x.day === d))) {
+  const held = (d) => d3.sum(r.filter((x) => x.day === d), (x) => x.posts ?? 0);
+  const days = DAYS.filter((d) => r.some((x) => x.day === d));
+  const few = days.filter((d) => held(d) < 3);
+  for (const d of days.filter((d) => !few.includes(d))) {
     const box = document.createElement('div');
     box.className = 'la-mini';
     const h = document.createElement('h4');
@@ -1602,7 +1639,13 @@ dash.draw('day-minis', (el) => {
     ch.className = 'la-chart';
     box.append(h, ch);
     el.append(box);
-    lineChart(ch, months, [{ name: d, color: P().day === 'all' || d === P().day ? dash.colors[0] : 'var(--cds-chart-muted)', values: new Map(r.filter((x) => x.day === d).map((x) => [x.month, x.avg])) }], { height: 110, yMax, yTicks: 2, unit: ' average' });
+    lineChart(ch, months, [{ name: d, color: P().day === 'all' || d === P().day ? dash.colors[0] : 'var(--cds-chart-muted)', values: new Map(r.filter((x) => x.day === d).map((x) => [x.month, x.avg])) }], { height: 110, yMax, yTicks: 2, unit: ' average', minW: 140 });
+  }
+  if (few.length) {
+    const n = document.createElement('p');
+    n.className = 'mb-note la-minis-note';
+    n.textContent = `Left out: ${few.map((d) => d + 's').join(', ')}, with fewer than three events or drills.`;
+    el.append(n);
   }
 });
 
@@ -1631,10 +1674,10 @@ dash.draw('multi-rows', (tb) => {
 });
 </script>
 
-<script src="builder.js?v=bfd7fde1"></script>
-<script src="members.js?v=e3cfb0ff"></script>
-<script src="awards.js?v=e5e5b882"></script>
-<script src="more.js?v=6cceb0b7"></script>
+<script src="builder.js?v=4fd55580"></script>
+<script src="members.js?v=2741ca1c"></script>
+<script src="awards.js?v=54e243a4"></script>
+<script src="more.js?v=4f6a91ee"></script>
 <footer class="site-foot">Counted from the 6th Louisiana Discord's #attendance and #drill-attendance channels.</footer>
 </main>
 </body>

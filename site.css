@@ -252,3 +252,24 @@ tr[data-post] { cursor: pointer; }
 }
 .mb-theme { margin-left: auto; }
 @media (max-width: 560px) { .mb-theme { margin-left: 0; } }
+/* 2026-11-18 review pass */
+/* Tables: the name column stays put while the rest scrolls sideways; a fade says more columns sit to the right. */
+.la .la-table .la-pin { position: sticky; left: 0; z-index: 1; background: var(--color-panel); }
+.la .la-table th.la-pin { z-index: 3; }
+.la .la-table tbody tr.la-click:hover td.la-pin, .la .la-table tbody tr[aria-selected="true"] td.la-pin { background: var(--color-bg); }
+.la .la-tablebox.la-scrolled .la-table .la-pin { box-shadow: 1px 0 0 var(--color-border-line); }
+.la .la-tablebox.la-more-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent); }
+.la .la-rowcount { margin: 0; max-width: none; align-self: flex-end; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); text-align: right; }
+/* Win rate by attendance: event count over each bar */
+.la .la-svg .la-bartext { font-size: 11px; fill: var(--color-fg-muted); }
+/* Small multiples: notes and the "smaller companies" fold span the grid */
+.la .la-minis-note, .la .la-minis-more { grid-column: 1 / -1; margin: 0; }
+.la .la-minis-more > summary { cursor: pointer; font-size: var(--cds-font-size-caption); color: var(--color-fg-muted); padding: var(--cds-pad-xs) 0; }
+.la .la-minis-more > .la-minis { margin-top: var(--cds-gap-sm); min-height: 0; }
+@media (max-width: 600px) {
+  .la .la-minis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--cds-gap-sm); }
+}
+/* Calendar: the year and weekday labels stay at the left edge while the grid scrolls */
+.la .mb-cal-year h4 { position: sticky; left: 0; width: max-content; }
+.la .mb-cal-line { display: flex; }
+.la .mb-cal-days { position: sticky; left: 0; z-index: 1; flex: none; background: var(--color-panel); }

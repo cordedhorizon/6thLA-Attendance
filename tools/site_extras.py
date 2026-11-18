@@ -128,7 +128,7 @@ rep('''  <section id="checks" class="la-page"''', '''  <section id="recruits" cl
     <div class="la-grid">
       <div class="la-card" id="win-by-size">
         <h2>Win rate by attendance</h2>
-        <p>Events grouped by how many attended. Point at a bar to see how many events are in each group.</p>
+        <p>Events grouped by how many attended. The number over each bar is how many events are in that group. Draws are left out of the win rate, and grey bars have fewer than five wins and losses, too few to read much into.</p>
         <div class="la-chart la-short" data-draw="rs-bands"></div>
       </div>
       <div class="la-card" id="results-over-time">
@@ -374,7 +374,7 @@ dash.calc('summary', {''', '''  <section id="builder" class="la-page" role="tabp
               <option value="event">Attendance at each event</option>
               <option value="share">Share of attendance (%)</option>
               <option value="held">Events and drills held</option>
-              <option value="people">Different people</option>
+              <option value="people">Unique people</option>
               <option value="attended">Times one person attended</option>
             </optgroup>
             <optgroup label="Members">

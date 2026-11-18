@@ -11,7 +11,7 @@
     event: 'Attendance at each event',
     share: 'Share of attendance',
     held: 'Events and drills held',
-    people: 'Different people',
+    people: 'Unique people',
     attended: 'Times attended',
     fresh: 'First-timers',
     joined: 'Recruits who joined a company',
